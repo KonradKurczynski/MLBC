@@ -1,4 +1,4 @@
-# ValidMLInference
+# MLBC
  This repository hosts the code for the **MLBC** package, implementing bias corrction methods described in [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585). <mark> A sample application of this package can be found in the file [ex1.Rmd]((https://github.com/KonradKurczynski/MLBC/blob/main/Ex1.Rmd)). 
 
  ## Getting Started 
@@ -50,261 +50,230 @@ This method jointly estimates the upstream (measurement) and downstream (regress
         Estimated variance-covariance matrix for the regression coefficients, computed as the inverse 
         of the Hessian of the objective function.
 
-# ValidMLInference: example 1
+# MLBC: example 1
 
-
-```python
-from ValidMLInference import ols, ols_bca, ols_bcm, one_step_unlabeled
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-from math import sqrt
+``` r
+library(MLBC)
 ```
 
-### Parameters for simulation
+# Example 1
 
+## Parameters
 
-```python
-nsim    = 1000
-n       = 16000      # training size
-m       = 1000       # test   size
-p       = 0.05       # P(X=1)
-kappa   = 1.0        # measurement‐error strength
-fpr     = kappa / sqrt(n)
+``` r
+nsim  <- 1000
+n     <- 16000
+m     <- 1000
+p     <- 0.05
+kappa <- 1
+fpr   <- kappa / sqrt(n)
 
-β0, β1       = 10.0, 1.0
-σ0, σ1       = 0.3, 0.5
+b0    <- 10
+b1    <- 1
+a0    <- 0.3   
+a1    <- 0.5   
 
-# Bayesian parameters for the false positive rate for BCA and BCM bias correction
-α = [0.0, 0.5, 0.5]
-β = [0.0, 2.0, 4.0]
+alpha <- c(0.0, 0.5, 0.5)
+beta  <- c(0.0, 2.0, 4.0)
 
-# pre­allocate storage: (sim × 9 methods × 2 coefficients)
-B = np.zeros((nsim, 9, 2))
-S = np.zeros((nsim, 9, 2))
+#pre-allocated storage
+B <- array(0, dim = c(nsim, 9, 2))
+S <- array(0, dim = c(nsim, 9, 2))
+
+update_results <- function(b, V, i, method_idx) {
+  for (j in 1:2) {
+    B[i, method_idx, j] <<- b[j]
+    S[i, method_idx, j] <<- sqrt(max(V[j,j], 0))
+  }
+}
 ```
 
-### Data Generation
+## Data Generation Process
 
+``` r
+generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
+  N    <- n + m
+  X    <- numeric(N)
+  Xhat <- numeric(N)
+  u    <- runif(N)
+  
+  for (j in seq_len(N)) {
+    if      (u[j] <= fpr)           X[j]   <- 1
+    else if (u[j] <= 2*fpr)         Xhat[j]<- 1
+    else if (u[j] <= p + fpr) {     # true positive
+      X[j]   <- 1
+      Xhat[j]<- 1
+    }
+  }
+  
+  eps <- rnorm(N)  # N(0,1)
+  # heteroskedastic noise: σ₁ when X=1, σ₀ when X=0
+  Y <- b0 + b1*X + (a1*X + a0*(1 - X)) * eps
+  
+  # split into train vs test
+  train_Y   <- Y[       1:n    ]
+  train_X   <- cbind(Xhat[    1:n],    rep(1, n))
+  test_Y    <- Y[(n+1):N      ]
+  test_Xhat <- cbind(Xhat[(n+1):N],    rep(1, m))
+  test_X    <- cbind(X[(n+1):N],       rep(1, m))
+  
+  list(
+    train_Y   = train_Y,
+    train_X   = train_X,
+    test_Y    = test_Y,
+    test_Xhat = test_Xhat,
+    test_X    = test_X
+  )
+}
+```
 
-```python
-def generate_data(n, m, p, fpr, β0, β1, σ0, σ1):
-    """
-    Generates simulated data.
+## Estimation and bias correction
+
+``` r
+for (i in seq_len(nsim)) {
+  dat   <- generate_data(n, m, p, fpr, b0, b1, a0, a1)
+  tY    <- dat$train_Y;    tX <- dat$train_X
+  eY    <- dat$test_Y;     eXhat <- dat$test_Xhat;  eX <- dat$test_X
+  
+  # 1) OLS on unlabeled (X̂)
+  ols_res <- ols(tY, tX)
+  update_results(ols_res$coef,  ols_res$vcov, i, 1)
+  
+  # 2) OLS on labeled (true X)
+  ols_res <- ols(eY, eX)
+  update_results(ols_res$coef,  ols_res$vcov, i, 2)
+  
+  # 3–8) Additive & multiplicative bias‑corrections
+  fpr_hat <- mean(eXhat[,1] * (1 - eX[,1]))
+  for (j in 1:3) {
+    fpr_bayes <- (fpr_hat * m + alpha[j]) / (m + alpha[j] + beta[j])
     
-    Parameters:
-      n, m: Python integers (number of training and test samples)
-      p, p1: floats
-      beta0, beta1: floats
+    bca_res <- ols_bca(tY, tX, fpr_bayes, m)
+    update_results(bca_res$coef, bca_res$vcov, i, 2 + j)
     
-    Returns:
-      A tuple: ((train_Y, train_X), (test_Y, test_Xhat, test_X))
-      where train_X and test_Xhat include a constant term as the second column.
-    """
-    N = n + m
-    X    = np.zeros(N)
-    Xhat = np.zeros(N)
-    u    = np.random.rand(N)
-
-    for j in range(N):
-        if   u[j] <= fpr:
-            X[j] = 1.0
-        elif u[j] <= 2*fpr:
-            Xhat[j] = 1.0
-        elif u[j] <= p + fpr:
-            X[j] = 1.0
-            Xhat[j] = 1.0
-
-    eps = np.random.randn(N)
-    Y   = β0 + β1*X + (σ1*X + σ0*(1.0 - X))*eps
-
-    # split into train vs test
-    train_Y   = Y[:n]
-    train_X   = np.column_stack((Xhat[:n], np.ones(n)))
-    test_Y    = Y[n:]
-    test_Xhat = np.column_stack((Xhat[n:], np.ones(m)))
-    test_X    = np.column_stack((X[n:],    np.ones(m)))
-
-    return (train_Y, train_X), (test_Y, test_Xhat, test_X)
+    bcm_res <- ols_bcm(tY, tX, fpr_bayes, m)
+    update_results(bcm_res$coef, bcm_res$vcov, i, 5 + j)
+  }
+  
+  # 9) One‑step estimator
+  one_res <- one_step(tY, tX)
+  update_results(one_res$coef, one_res$cov, i, 9)
+  
+  if (i %% 100 == 0) {
+    message("Completed ", i, " of ", nsim, " sims")
+  }
+}
 ```
 
-### Bias-correction stage
+    ## Completed 100 of 1000 sims
 
+    ## Completed 200 of 1000 sims
 
-```python
-def update_results(B, S, b, V, i, method_idx): 
-    """Store coef b and se=sqrt(diag(V))."""
-    for j in (0,1):
-        B[i, method_idx, j] = b[j]
-        S[i, method_idx, j] = np.sqrt(max(V[j,j], 0.0))
+    ## Completed 300 of 1000 sims
 
-for i in range(nsim):
-    (tY, tX), (eY, eXhat, eX) = generate_data(
-        n, m, p, fpr, β0, β1, σ0, σ1
-    )
+    ## Completed 400 of 1000 sims
 
-    # 1) OLS on unlabeled (Xhat)
-    b, V, _ = ols(tY, tX)
-    update_results(B, S, b, V, i, 0)
+    ## Completed 500 of 1000 sims
 
-    # 2) OLS on labeled (true X)
-    b, V, _ = ols(eY, eX)
-    update_results(B, S, b, V, i, 1)
+    ## Completed 600 of 1000 sims
 
-    # 3–8) Additive & multiplicative bias corrections
-    fpr_hat = np.mean(eXhat[:,0] * (1.0 - eX[:,0]))
-    for j in range(3):
-        fpr_bayes = (fpr_hat*m + α[j]) / (m + α[j] + β[j])
-        b, V = ols_bca(tY, tX, fpr_bayes, m)
-        update_results(B, S, b, V, i, 2 + j)
-        b, V = ols_bcm(tY, tX, fpr_bayes, m)
-        update_results(B, S, b, V, i, 5 + j)
+    ## Completed 700 of 1000 sims
 
-    # 9) One‐step unlabeled‐only
-    b, V = one_step_unlabeled(tY, tX)
-    update_results(B, S, b, V, i, 8)
-    
-    if (i+1) % 100 == 0:
-        print(f"Done {i+1}/{nsim} sims")
+    ## Completed 800 of 1000 sims
 
-```
+    ## Completed 900 of 1000 sims
 
-    Done 100/1000 sims
-    Done 200/1000 sims
-    Done 300/1000 sims
-    Done 400/1000 sims
-    Done 500/1000 sims
-    Done 600/1000 sims
-    Done 700/1000 sims
-    Done 800/1000 sims
-    Done 900/1000 sims
-    Done 1000/1000 sims
+    ## Completed 1000 of 1000 sims
 
-
-### Creating a Coverage Table
-
-
-```python
-def coverage(bgrid, b, se):
-    """
-    Computes the coverage probability for a grid of β values.
-    
-    For each value in bgrid, it computes the fraction of estimates b that
-    lie within 1.96*se of that value.
-    """
-    cvg = np.empty_like(bgrid)
-    for i, val in enumerate(bgrid):
-        cvg[i] = np.mean(np.abs(b - val) <= 1.96 * se)
-    return cvg
-```
-
-
-```python
-true_beta1 = 1.0  
-
-methods = {
-    "OLS ĥ":  0,
-    "OLS θ̂": 1,
-    "BCA‑0": 2,
-    "BCA‑1": 3,
-    "BCA‑2": 4,
-    "BCM‑0": 5,
-    "BCM‑1": 6,
-    "BCM‑2": 7,
-    "OSU":    8,
+``` r
+coverage <- function(bgrid, b, se) {
+  n_grid <- length(bgrid)
+  cvg    <- numeric(n_grid)
+  for (i in seq_along(bgrid)) {
+    val      <- bgrid[i]
+    cvg[i]   <- mean(abs(b - val) <= 1.96 * se)
+  }
+  cvg
 }
 
-cov_dict = {}
-for name, col in methods.items():
-    slopes = B[:, col, 0]    
-    ses   = S[:, col, 0]     
-    # fraction of sims whose 95% CI covers true_beta1
-    cov_dict[name] = np.mean(np.abs(slopes - true_beta1) <= 1.96 * ses)
+true_beta1 <- 1.0
 
-cov_series = pd.Series(cov_dict, name=f"Coverage @ β₁={true_beta1}")
-cov_series
+methods <- c(
+  "OLS ĥ"  = 1,
+  "OLS θ̂"  = 2,
+  "BCA-0"  = 3,
+  "BCA-1"  = 4,
+  "BCA-2"  = 5,
+  "BCM-0"  = 6,
+  "BCM-1"  = 7,
+  "BCM-2"  = 8,
+  "OSU"    = 9
+)
+
+cov_dict <- sapply(methods, function(col) {
+  slopes <- B[, col, 1]   
+  ses    <- S[, col, 1]
+  mean(abs(slopes - true_beta1) <= 1.96 * ses)
+})
+
+cov_series <- setNames(cov_dict, names(methods))
+print(cov_series)
 ```
 
+    ## OLS ĥ OLS θ̂ BCA-0 BCA-1 BCA-2 BCM-0 BCM-1 BCM-2   OSU 
+    ## 0.000 0.952 0.841 0.890 0.888 0.887 0.912 0.911 0.951
 
+``` r
+method_names <- names(methods)
 
+coef_names <- c("Beta1","Beta0")
 
-    OLS ĥ     0.000
-    OLS θ̂    0.937
-    BCA‑0     0.881
-    BCA‑1     0.911
-    BCA‑2     0.910
-    BCM‑0     0.887
-    BCM‑1     0.911
-    BCM‑2     0.911
-    OSU       0.948
-    Name: Coverage @ β₁=1.0, dtype: float64
+nmethods <- dim(B)[2]
+df <- data.frame(Method = method_names, stringsAsFactors = FALSE)
 
+df$Est_Beta1   <- NA_real_
+df$SE_Beta1    <- NA_real_
+df$CI95_Beta1  <- NA_character_
+df$Est_Beta0   <- NA_real_
+df$SE_Beta0    <- NA_real_
+df$CI95_Beta0  <- NA_character_
 
+for(i in seq_len(nmethods)) {
+  est1 <- B[, i, 1]; se1 <- S[, i, 1]
+  est0 <- B[, i, 2]; se0 <- S[, i, 2]
+  
+  ci1 <- quantile(est1, probs = c(0.025, 0.975))
+  ci0 <- quantile(est0, probs = c(0.025, 0.975))
+  
+  df$Est_Beta1[i]  <- mean(est1)
+  df$SE_Beta1[i]   <- mean(se1)
+  df$CI95_Beta1[i] <- sprintf("[%0.3f, %0.3f]", ci1[1], ci1[2])
+  
+  df$Est_Beta0[i]  <- mean(est0)
+  df$SE_Beta0[i]   <- mean(se0)
+  df$CI95_Beta0[i] <- sprintf("[%0.3f, %0.3f]", ci0[1], ci0[2])
+}
 
-### Recovering Coefficients and Standard Errors
-
-Recall that the dataframe B stores our coefficient results while the dataframe S stores our standard errors. We can summarize our simulation results by averaging over the columns which store the results for the different simulation methods.
-
-
-```python
-nsim, nmethods, ncoeff = B.shape
-
-method_names = [
-    "OLS (unlabeled)",
-    "OLS (labeled)",
-    "BCA (j=0)",
-    "BCA (j=1)",
-    "BCA (j=2)",
-    "BCM (j=0)",
-    "BCM (j=1)",
-    "BCM (j=2)",
-    "1-Step"
-]
-
-results = []
-
-for i in range(nmethods):
-    row = {"Method": method_names[i]}
-    
-    for j, coef in enumerate(["Beta1", "Beta0"]):
-        estimates = B[:, i, j]
-        ses = S[:, i, j]
-        mean_est = np.nanmean(estimates)
-        mean_se = np.nanmean(ses)
-        lower = np.percentile(estimates, 2.5)
-        upper = np.percentile(estimates, 97.5)
-        
-        row[f"Est({coef})"] = f"{mean_est:.3f}"
-        row[f"SE({coef})"] = f"{mean_se:.3f}"
-        row[f"95% CI ({coef})"] = f"[{lower:.3f}, {upper:.3f}]"
-    
-    results.append(row)
-
-df_results = pd.DataFrame(results).set_index("Method")
-print(df_results)
+print(df)
 ```
 
-                    Est(Beta1) SE(Beta1)  95% CI (Beta1) Est(Beta0) SE(Beta0)  \
-    Method                                                                      
-    OLS (unlabeled)      0.835     0.021  [0.793, 0.875]     10.008     0.003   
-    OLS (labeled)        1.000     0.071  [0.856, 1.151]     10.000     0.010   
-    BCA (j=0)            0.972     0.062  [0.870, 1.084]     10.001     0.004   
-    BCA (j=1)            0.980     0.064  [0.878, 1.092]     10.001     0.004   
-    BCA (j=2)            0.980     0.064  [0.878, 1.092]     10.001     0.004   
-    BCM (j=0)            1.004     0.064  [0.874, 1.175]     10.000     0.004   
-    BCM (j=1)            1.016     0.067  [0.885, 1.191]      9.999     0.004   
-    BCM (j=2)            1.016     0.067  [0.885, 1.190]      9.999     0.004   
-    1-Step               1.000     0.031  [0.939, 1.058]     10.000     0.002   
-    
-                       95% CI (Beta0)  
-    Method                             
-    OLS (unlabeled)  [10.003, 10.013]  
-    OLS (labeled)     [9.981, 10.020]  
-    BCA (j=0)         [9.994, 10.008]  
-    BCA (j=1)         [9.993, 10.008]  
-    BCA (j=2)         [9.993, 10.008]  
-    BCM (j=0)         [9.990, 10.007]  
-    BCM (j=1)         [9.989, 10.007]  
-    BCM (j=2)         [9.989, 10.007]  
-    1-Step            [9.995, 10.005]  
-
+    ##   Method Est_Beta1   SE_Beta1     CI95_Beta1 Est_Beta0    SE_Beta0
+    ## 1  OLS ĥ 0.8345230 0.02126622 [0.793, 0.876] 10.008229 0.002559755
+    ## 2  OLS θ̂ 0.9979584 0.07110668 [0.862, 1.139]  9.999644 0.009712562
+    ## 3  BCA-0 0.9733887 0.05192212 [0.879, 1.097] 10.001295 0.003527102
+    ## 4  BCA-1 0.9818128 0.05328685 [0.888, 1.105] 10.000874 0.003578399
+    ## 5  BCA-2 0.9815196 0.05324235 [0.888, 1.105] 10.000889 0.003576679
+    ## 6  BCM-0 1.0064253 0.06465110 [0.886, 1.197]  9.999649 0.003963054
+    ## 7  BCM-1 1.0188792 0.06713945 [0.896, 1.213]  9.999027 0.004060987
+    ## 8  BCM-2 1.0184172 0.06705113 [0.896, 1.212]  9.999050 0.004057390
+    ## 9    OSU 0.9985015 0.03102350 [0.934, 1.055]  9.999928 0.002500163
+    ##         CI95_Beta0
+    ## 1 [10.003, 10.013]
+    ## 2  [9.981, 10.018]
+    ## 3  [9.994, 10.007]
+    ## 4  [9.994, 10.007]
+    ## 5  [9.994, 10.007]
+    ## 6  [9.990, 10.007]
+    ## 7  [9.989, 10.007]
+    ## 8  [9.989, 10.007]
+    ## 9  [9.995, 10.005]
