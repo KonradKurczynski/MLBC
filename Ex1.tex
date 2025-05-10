@@ -1,0 +1,378 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Exammple 1},
+  pdfauthor={Konrad Kurczynski},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Exammple 1}
+\author{Konrad Kurczynski}
+\date{2025-05-10}
+
+\begin{document}
+\maketitle
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(MLBC)}
+\end{Highlighting}
+\end{Shaded}
+
+\section{Example 1}\label{example-1}
+
+\subsection{Parameters}\label{parameters}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{nsim  }\OtherTok{\textless{}{-}} \DecValTok{1000}
+\NormalTok{n     }\OtherTok{\textless{}{-}} \DecValTok{16000}
+\NormalTok{m     }\OtherTok{\textless{}{-}} \DecValTok{1000}
+\NormalTok{p     }\OtherTok{\textless{}{-}} \FloatTok{0.05}
+\NormalTok{kappa }\OtherTok{\textless{}{-}} \DecValTok{1}
+\NormalTok{fpr   }\OtherTok{\textless{}{-}}\NormalTok{ kappa }\SpecialCharTok{/} \FunctionTok{sqrt}\NormalTok{(n)}
+
+\NormalTok{b0    }\OtherTok{\textless{}{-}} \DecValTok{10}
+\NormalTok{b1    }\OtherTok{\textless{}{-}} \DecValTok{1}
+\NormalTok{a0    }\OtherTok{\textless{}{-}} \FloatTok{0.3}   
+\NormalTok{a1    }\OtherTok{\textless{}{-}} \FloatTok{0.5}   
+
+\NormalTok{alpha }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\FloatTok{0.0}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{)}
+\NormalTok{beta  }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\FloatTok{0.0}\NormalTok{, }\FloatTok{2.0}\NormalTok{, }\FloatTok{4.0}\NormalTok{)}
+
+\CommentTok{\#pre{-}allocated storage}
+\NormalTok{B }\OtherTok{\textless{}{-}} \FunctionTok{array}\NormalTok{(}\DecValTok{0}\NormalTok{, }\AttributeTok{dim =} \FunctionTok{c}\NormalTok{(nsim, }\DecValTok{9}\NormalTok{, }\DecValTok{2}\NormalTok{))}
+\NormalTok{S }\OtherTok{\textless{}{-}} \FunctionTok{array}\NormalTok{(}\DecValTok{0}\NormalTok{, }\AttributeTok{dim =} \FunctionTok{c}\NormalTok{(nsim, }\DecValTok{9}\NormalTok{, }\DecValTok{2}\NormalTok{))}
+
+\NormalTok{update\_results }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(b, V, i, method\_idx) \{}
+  \ControlFlowTok{for}\NormalTok{ (j }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\DecValTok{2}\NormalTok{) \{}
+\NormalTok{    B[i, method\_idx, j] }\OtherTok{\textless{}\textless{}{-}}\NormalTok{ b[j]}
+\NormalTok{    S[i, method\_idx, j] }\OtherTok{\textless{}\textless{}{-}} \FunctionTok{sqrt}\NormalTok{(}\FunctionTok{max}\NormalTok{(V[j,j], }\DecValTok{0}\NormalTok{))}
+\NormalTok{  \}}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Data Generation Process}\label{data-generation-process}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{generate\_data }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(n, m, p, fpr, b0, b1, a0, a1) \{}
+\NormalTok{  N    }\OtherTok{\textless{}{-}}\NormalTok{ n }\SpecialCharTok{+}\NormalTok{ m}
+\NormalTok{  X    }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(N)}
+\NormalTok{  Xhat }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(N)}
+\NormalTok{  u    }\OtherTok{\textless{}{-}} \FunctionTok{runif}\NormalTok{(N)}
+  
+  \ControlFlowTok{for}\NormalTok{ (j }\ControlFlowTok{in} \FunctionTok{seq\_len}\NormalTok{(N)) \{}
+    \ControlFlowTok{if}\NormalTok{      (u[j] }\SpecialCharTok{\textless{}=}\NormalTok{ fpr)           X[j]   }\OtherTok{\textless{}{-}} \DecValTok{1}
+    \ControlFlowTok{else} \ControlFlowTok{if}\NormalTok{ (u[j] }\SpecialCharTok{\textless{}=} \DecValTok{2}\SpecialCharTok{*}\NormalTok{fpr)         Xhat[j]}\OtherTok{\textless{}{-}} \DecValTok{1}
+    \ControlFlowTok{else} \ControlFlowTok{if}\NormalTok{ (u[j] }\SpecialCharTok{\textless{}=}\NormalTok{ p }\SpecialCharTok{+}\NormalTok{ fpr) \{     }\CommentTok{\# true positive}
+\NormalTok{      X[j]   }\OtherTok{\textless{}{-}} \DecValTok{1}
+\NormalTok{      Xhat[j]}\OtherTok{\textless{}{-}} \DecValTok{1}
+\NormalTok{    \}}
+\NormalTok{  \}}
+  
+\NormalTok{  eps }\OtherTok{\textless{}{-}} \FunctionTok{rnorm}\NormalTok{(N)  }\CommentTok{\# N(0,1)}
+  \CommentTok{\# heteroskedastic noise: σ₁ when X=1, σ₀ when X=0}
+\NormalTok{  Y }\OtherTok{\textless{}{-}}\NormalTok{ b0 }\SpecialCharTok{+}\NormalTok{ b1}\SpecialCharTok{*}\NormalTok{X }\SpecialCharTok{+}\NormalTok{ (a1}\SpecialCharTok{*}\NormalTok{X }\SpecialCharTok{+}\NormalTok{ a0}\SpecialCharTok{*}\NormalTok{(}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ X)) }\SpecialCharTok{*}\NormalTok{ eps}
+  
+  \CommentTok{\# split into train vs test}
+\NormalTok{  train\_Y   }\OtherTok{\textless{}{-}}\NormalTok{ Y[       }\DecValTok{1}\SpecialCharTok{:}\NormalTok{n    ]}
+\NormalTok{  train\_X   }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(Xhat[    }\DecValTok{1}\SpecialCharTok{:}\NormalTok{n],    }\FunctionTok{rep}\NormalTok{(}\DecValTok{1}\NormalTok{, n))}
+\NormalTok{  test\_Y    }\OtherTok{\textless{}{-}}\NormalTok{ Y[(n}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{N      ]}
+\NormalTok{  test\_Xhat }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(Xhat[(n}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{N],    }\FunctionTok{rep}\NormalTok{(}\DecValTok{1}\NormalTok{, m))}
+\NormalTok{  test\_X    }\OtherTok{\textless{}{-}} \FunctionTok{cbind}\NormalTok{(X[(n}\SpecialCharTok{+}\DecValTok{1}\NormalTok{)}\SpecialCharTok{:}\NormalTok{N],       }\FunctionTok{rep}\NormalTok{(}\DecValTok{1}\NormalTok{, m))}
+  
+  \FunctionTok{list}\NormalTok{(}
+    \AttributeTok{train\_Y   =}\NormalTok{ train\_Y,}
+    \AttributeTok{train\_X   =}\NormalTok{ train\_X,}
+    \AttributeTok{test\_Y    =}\NormalTok{ test\_Y,}
+    \AttributeTok{test\_Xhat =}\NormalTok{ test\_Xhat,}
+    \AttributeTok{test\_X    =}\NormalTok{ test\_X}
+\NormalTok{  )}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Estimation and bias
+correction}\label{estimation-and-bias-correction}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \FunctionTok{seq\_len}\NormalTok{(nsim)) \{}
+\NormalTok{  dat   }\OtherTok{\textless{}{-}} \FunctionTok{generate\_data}\NormalTok{(n, m, p, fpr, b0, b1, a0, a1)}
+\NormalTok{  tY    }\OtherTok{\textless{}{-}}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{train\_Y;    tX }\OtherTok{\textless{}{-}}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{train\_X}
+\NormalTok{  eY    }\OtherTok{\textless{}{-}}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{test\_Y;     eXhat }\OtherTok{\textless{}{-}}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{test\_Xhat;  eX }\OtherTok{\textless{}{-}}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{test\_X}
+  
+  \CommentTok{\# 1) OLS on unlabeled (X̂)}
+\NormalTok{  ols\_res }\OtherTok{\textless{}{-}} \FunctionTok{ols}\NormalTok{(tY, tX)}
+  \FunctionTok{update\_results}\NormalTok{(ols\_res}\SpecialCharTok{$}\NormalTok{coef,  ols\_res}\SpecialCharTok{$}\NormalTok{vcov, i, }\DecValTok{1}\NormalTok{)}
+  
+  \CommentTok{\# 2) OLS on labeled (true X)}
+\NormalTok{  ols\_res }\OtherTok{\textless{}{-}} \FunctionTok{ols}\NormalTok{(eY, eX)}
+  \FunctionTok{update\_results}\NormalTok{(ols\_res}\SpecialCharTok{$}\NormalTok{coef,  ols\_res}\SpecialCharTok{$}\NormalTok{vcov, i, }\DecValTok{2}\NormalTok{)}
+  
+  \CommentTok{\# 3–8) Additive \& multiplicative bias‑corrections}
+\NormalTok{  fpr\_hat }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(eXhat[,}\DecValTok{1}\NormalTok{] }\SpecialCharTok{*}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ eX[,}\DecValTok{1}\NormalTok{]))}
+  \ControlFlowTok{for}\NormalTok{ (j }\ControlFlowTok{in} \DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{) \{}
+\NormalTok{    fpr\_bayes }\OtherTok{\textless{}{-}}\NormalTok{ (fpr\_hat }\SpecialCharTok{*}\NormalTok{ m }\SpecialCharTok{+}\NormalTok{ alpha[j]) }\SpecialCharTok{/}\NormalTok{ (m }\SpecialCharTok{+}\NormalTok{ alpha[j] }\SpecialCharTok{+}\NormalTok{ beta[j])}
+    
+\NormalTok{    bca\_res }\OtherTok{\textless{}{-}} \FunctionTok{ols\_bca}\NormalTok{(tY, tX, fpr\_bayes, m)}
+    \FunctionTok{update\_results}\NormalTok{(bca\_res}\SpecialCharTok{$}\NormalTok{coef, bca\_res}\SpecialCharTok{$}\NormalTok{vcov, i, }\DecValTok{2} \SpecialCharTok{+}\NormalTok{ j)}
+    
+\NormalTok{    bcm\_res }\OtherTok{\textless{}{-}} \FunctionTok{ols\_bcm}\NormalTok{(tY, tX, fpr\_bayes, m)}
+    \FunctionTok{update\_results}\NormalTok{(bcm\_res}\SpecialCharTok{$}\NormalTok{coef, bcm\_res}\SpecialCharTok{$}\NormalTok{vcov, i, }\DecValTok{5} \SpecialCharTok{+}\NormalTok{ j)}
+\NormalTok{  \}}
+  
+  \CommentTok{\# 9) One‑step estimator}
+\NormalTok{  one\_res }\OtherTok{\textless{}{-}} \FunctionTok{one\_step}\NormalTok{(tY, tX)}
+  \FunctionTok{update\_results}\NormalTok{(one\_res}\SpecialCharTok{$}\NormalTok{coef, one\_res}\SpecialCharTok{$}\NormalTok{cov, i, }\DecValTok{9}\NormalTok{)}
+  
+  \ControlFlowTok{if}\NormalTok{ (i }\SpecialCharTok{\%\%} \DecValTok{100} \SpecialCharTok{==} \DecValTok{0}\NormalTok{) \{}
+    \FunctionTok{message}\NormalTok{(}\StringTok{"Completed "}\NormalTok{, i, }\StringTok{" of "}\NormalTok{, nsim, }\StringTok{" sims"}\NormalTok{)}
+\NormalTok{  \}}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Completed 100 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 200 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 300 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 400 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 500 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 600 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 700 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 800 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 900 of 1000 sims
+\end{verbatim}
+
+\begin{verbatim}
+## Completed 1000 of 1000 sims
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{coverage }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(bgrid, b, se) \{}
+\NormalTok{  n\_grid }\OtherTok{\textless{}{-}} \FunctionTok{length}\NormalTok{(bgrid)}
+\NormalTok{  cvg    }\OtherTok{\textless{}{-}} \FunctionTok{numeric}\NormalTok{(n\_grid)}
+  \ControlFlowTok{for}\NormalTok{ (i }\ControlFlowTok{in} \FunctionTok{seq\_along}\NormalTok{(bgrid)) \{}
+\NormalTok{    val      }\OtherTok{\textless{}{-}}\NormalTok{ bgrid[i]}
+\NormalTok{    cvg[i]   }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(}\FunctionTok{abs}\NormalTok{(b }\SpecialCharTok{{-}}\NormalTok{ val) }\SpecialCharTok{\textless{}=} \FloatTok{1.96} \SpecialCharTok{*}\NormalTok{ se)}
+\NormalTok{  \}}
+\NormalTok{  cvg}
+\NormalTok{\}}
+
+\NormalTok{true\_beta1 }\OtherTok{\textless{}{-}} \FloatTok{1.0}
+
+\NormalTok{methods }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
+  \StringTok{"OLS ĥ"}  \OtherTok{=} \DecValTok{1}\NormalTok{,}
+  \StringTok{"OLS θ̂"}  \OtherTok{=} \DecValTok{2}\NormalTok{,}
+  \StringTok{"BCA{-}0"}  \OtherTok{=} \DecValTok{3}\NormalTok{,}
+  \StringTok{"BCA{-}1"}  \OtherTok{=} \DecValTok{4}\NormalTok{,}
+  \StringTok{"BCA{-}2"}  \OtherTok{=} \DecValTok{5}\NormalTok{,}
+  \StringTok{"BCM{-}0"}  \OtherTok{=} \DecValTok{6}\NormalTok{,}
+  \StringTok{"BCM{-}1"}  \OtherTok{=} \DecValTok{7}\NormalTok{,}
+  \StringTok{"BCM{-}2"}  \OtherTok{=} \DecValTok{8}\NormalTok{,}
+  \StringTok{"OSU"}    \OtherTok{=} \DecValTok{9}
+\NormalTok{)}
+
+\NormalTok{cov\_dict }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(methods, }\ControlFlowTok{function}\NormalTok{(col) \{}
+\NormalTok{  slopes }\OtherTok{\textless{}{-}}\NormalTok{ B[, col, }\DecValTok{1}\NormalTok{]   }
+\NormalTok{  ses    }\OtherTok{\textless{}{-}}\NormalTok{ S[, col, }\DecValTok{1}\NormalTok{]}
+  \FunctionTok{mean}\NormalTok{(}\FunctionTok{abs}\NormalTok{(slopes }\SpecialCharTok{{-}}\NormalTok{ true\_beta1) }\SpecialCharTok{\textless{}=} \FloatTok{1.96} \SpecialCharTok{*}\NormalTok{ ses)}
+\NormalTok{\})}
+
+\NormalTok{cov\_series }\OtherTok{\textless{}{-}} \FunctionTok{setNames}\NormalTok{(cov\_dict, }\FunctionTok{names}\NormalTok{(methods))}
+\FunctionTok{print}\NormalTok{(cov\_series)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## OLS ĥ OLS θ̂ BCA-0 BCA-1 BCA-2 BCM-0 BCM-1 BCM-2   OSU 
+## 0.000 0.942 0.860 0.892 0.892 0.885 0.906 0.905 0.952
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{method\_names }\OtherTok{\textless{}{-}} \FunctionTok{names}\NormalTok{(methods)}
+
+\NormalTok{coef\_names }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"Beta1"}\NormalTok{,}\StringTok{"Beta0"}\NormalTok{)}
+
+\NormalTok{nmethods }\OtherTok{\textless{}{-}} \FunctionTok{dim}\NormalTok{(B)[}\DecValTok{2}\NormalTok{]}
+\NormalTok{df }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{Method =}\NormalTok{ method\_names, }\AttributeTok{stringsAsFactors =} \ConstantTok{FALSE}\NormalTok{)}
+
+\NormalTok{df}\SpecialCharTok{$}\NormalTok{Est\_Beta1   }\OtherTok{\textless{}{-}} \ConstantTok{NA\_real\_}
+\NormalTok{df}\SpecialCharTok{$}\NormalTok{SE\_Beta1    }\OtherTok{\textless{}{-}} \ConstantTok{NA\_real\_}
+\NormalTok{df}\SpecialCharTok{$}\NormalTok{CI95\_Beta1  }\OtherTok{\textless{}{-}} \ConstantTok{NA\_character\_}
+\NormalTok{df}\SpecialCharTok{$}\NormalTok{Est\_Beta0   }\OtherTok{\textless{}{-}} \ConstantTok{NA\_real\_}
+\NormalTok{df}\SpecialCharTok{$}\NormalTok{SE\_Beta0    }\OtherTok{\textless{}{-}} \ConstantTok{NA\_real\_}
+\NormalTok{df}\SpecialCharTok{$}\NormalTok{CI95\_Beta0  }\OtherTok{\textless{}{-}} \ConstantTok{NA\_character\_}
+
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \FunctionTok{seq\_len}\NormalTok{(nmethods)) \{}
+  \CommentTok{\# β₁ is the first coefficient (j=1), β₀ is the second (j=2)}
+\NormalTok{  est1 }\OtherTok{\textless{}{-}}\NormalTok{ B[, i, }\DecValTok{1}\NormalTok{]; se1 }\OtherTok{\textless{}{-}}\NormalTok{ S[, i, }\DecValTok{1}\NormalTok{]}
+\NormalTok{  est0 }\OtherTok{\textless{}{-}}\NormalTok{ B[, i, }\DecValTok{2}\NormalTok{]; se0 }\OtherTok{\textless{}{-}}\NormalTok{ S[, i, }\DecValTok{2}\NormalTok{]}
+  
+\NormalTok{  ci1 }\OtherTok{\textless{}{-}} \FunctionTok{quantile}\NormalTok{(est1, }\AttributeTok{probs =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.025}\NormalTok{, }\FloatTok{0.975}\NormalTok{))}
+\NormalTok{  ci0 }\OtherTok{\textless{}{-}} \FunctionTok{quantile}\NormalTok{(est0, }\AttributeTok{probs =} \FunctionTok{c}\NormalTok{(}\FloatTok{0.025}\NormalTok{, }\FloatTok{0.975}\NormalTok{))}
+  
+\NormalTok{  df}\SpecialCharTok{$}\NormalTok{Est\_Beta1[i]  }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(est1)}
+\NormalTok{  df}\SpecialCharTok{$}\NormalTok{SE\_Beta1[i]   }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(se1)}
+\NormalTok{  df}\SpecialCharTok{$}\NormalTok{CI95\_Beta1[i] }\OtherTok{\textless{}{-}} \FunctionTok{sprintf}\NormalTok{(}\StringTok{"[\%0.3f, \%0.3f]"}\NormalTok{, ci1[}\DecValTok{1}\NormalTok{], ci1[}\DecValTok{2}\NormalTok{])}
+  
+\NormalTok{  df}\SpecialCharTok{$}\NormalTok{Est\_Beta0[i]  }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(est0)}
+\NormalTok{  df}\SpecialCharTok{$}\NormalTok{SE\_Beta0[i]   }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(se0)}
+\NormalTok{  df}\SpecialCharTok{$}\NormalTok{CI95\_Beta0[i] }\OtherTok{\textless{}{-}} \FunctionTok{sprintf}\NormalTok{(}\StringTok{"[\%0.3f, \%0.3f]"}\NormalTok{, ci0[}\DecValTok{1}\NormalTok{], ci0[}\DecValTok{2}\NormalTok{])}
+\NormalTok{\}}
+
+\FunctionTok{print}\NormalTok{(df)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   Method Est_Beta1   SE_Beta1     CI95_Beta1 Est_Beta0    SE_Beta0
+## 1  OLS ĥ 0.8330218 0.02129943 [0.789, 0.873] 10.008366 0.002560108
+## 2  OLS θ̂ 0.9950741 0.07078959 [0.857, 1.135] 10.000288 0.009715575
+## 3  BCA-0 0.9722888 0.05196855 [0.866, 1.088] 10.001414 0.003527712
+## 4  BCA-1 0.9807063 0.05333082 [0.874, 1.096] 10.000994 0.003578806
+## 5  BCA-2 0.9804123 0.05328630 [0.874, 1.096] 10.001009 0.003577086
+## 6  BCM-0 1.0056088 0.06477575 [0.872, 1.185]  9.999752 0.003966670
+## 7  BCM-1 1.0180743 0.06726514 [0.882, 1.202]  9.999131 0.004064510
+## 8  BCM-2 1.0176100 0.06717650 [0.882, 1.201]  9.999154 0.004060900
+## 9    OSU 0.9981362 0.03105616 [0.932, 1.052] 10.000038 0.002501161
+##         CI95_Beta0
+## 1 [10.003, 10.014]
+## 2  [9.982, 10.020]
+## 3  [9.994, 10.008]
+## 4  [9.994, 10.008]
+## 5  [9.994, 10.008]
+## 6  [9.990, 10.008]
+## 7  [9.989, 10.007]
+## 8  [9.989, 10.007]
+## 9  [9.995, 10.005]
+\end{verbatim}
+
+\end{document}
