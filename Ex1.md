@@ -1,21 +1,12 @@
----
-title: "Exammple 1"
-author: "Konrad Kurczynski"
-date: "`r Sys.Date()`"
-output: 
-  md_document:
-    variant: markdown_github
----
-
-```{r}
+``` r
 library(MLBC)
 ```
 
 # Example 1
 
-## Parameters 
+## Parameters
 
-```{r}
+``` r
 nsim  <- 1000
 n     <- 16000
 m     <- 1000
@@ -45,7 +36,7 @@ update_results <- function(b, V, i, method_idx) {
 
 ## Data Generation Process
 
-```{r}
+``` r
 generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
   N    <- n + m
   X    <- numeric(N)
@@ -84,7 +75,7 @@ generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
 
 ## Estimation and bias correction
 
-```{r}
+``` r
 for (i in seq_len(nsim)) {
   dat   <- generate_data(n, m, p, fpr, b0, b1, a0, a1)
   tY    <- dat$train_Y;    tX <- dat$train_X
@@ -120,7 +111,27 @@ for (i in seq_len(nsim)) {
 }
 ```
 
-```{r}
+    ## Completed 100 of 1000 sims
+
+    ## Completed 200 of 1000 sims
+
+    ## Completed 300 of 1000 sims
+
+    ## Completed 400 of 1000 sims
+
+    ## Completed 500 of 1000 sims
+
+    ## Completed 600 of 1000 sims
+
+    ## Completed 700 of 1000 sims
+
+    ## Completed 800 of 1000 sims
+
+    ## Completed 900 of 1000 sims
+
+    ## Completed 1000 of 1000 sims
+
+``` r
 coverage <- function(bgrid, b, se) {
   n_grid <- length(bgrid)
   cvg    <- numeric(n_grid)
@@ -153,9 +164,12 @@ cov_dict <- sapply(methods, function(col) {
 
 cov_series <- setNames(cov_dict, names(methods))
 print(cov_series)
-
 ```
-```{r}
+
+    ## OLS ĥ OLS θ̂ BCA-0 BCA-1 BCA-2 BCM-0 BCM-1 BCM-2   OSU 
+    ## 0.000 0.952 0.841 0.890 0.888 0.887 0.912 0.911 0.951
+
+``` r
 method_names <- names(methods)
 
 coef_names <- c("Beta1","Beta0")
@@ -189,5 +203,23 @@ for(i in seq_len(nmethods)) {
 print(df)
 ```
 
-
-
+    ##   Method Est_Beta1   SE_Beta1     CI95_Beta1 Est_Beta0    SE_Beta0
+    ## 1  OLS ĥ 0.8345230 0.02126622 [0.793, 0.876] 10.008229 0.002559755
+    ## 2  OLS θ̂ 0.9979584 0.07110668 [0.862, 1.139]  9.999644 0.009712562
+    ## 3  BCA-0 0.9733887 0.05192212 [0.879, 1.097] 10.001295 0.003527102
+    ## 4  BCA-1 0.9818128 0.05328685 [0.888, 1.105] 10.000874 0.003578399
+    ## 5  BCA-2 0.9815196 0.05324235 [0.888, 1.105] 10.000889 0.003576679
+    ## 6  BCM-0 1.0064253 0.06465110 [0.886, 1.197]  9.999649 0.003963054
+    ## 7  BCM-1 1.0188792 0.06713945 [0.896, 1.213]  9.999027 0.004060987
+    ## 8  BCM-2 1.0184172 0.06705113 [0.896, 1.212]  9.999050 0.004057390
+    ## 9    OSU 0.9985015 0.03102350 [0.934, 1.055]  9.999928 0.002500163
+    ##         CI95_Beta0
+    ## 1 [10.003, 10.013]
+    ## 2  [9.981, 10.018]
+    ## 3  [9.994, 10.007]
+    ## 4  [9.994, 10.007]
+    ## 5  [9.994, 10.007]
+    ## 6  [9.990, 10.007]
+    ## 7  [9.989, 10.007]
+    ## 8  [9.989, 10.007]
+    ## 9  [9.995, 10.005]
