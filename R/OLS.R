@@ -11,26 +11,30 @@ ols <- function(Y, X, se = TRUE) {
   Y <- as.numeric(Y)
   n <- nrow(X); d <- ncol(X)
 
-  # 1/n–scaled cross‐products
-  sXX <- crossprod(X) / n         # t(X) %*% X / n
-  sXY <- crossprod(X, Y)   / n    # t(X) %*% Y / n
 
-  # solve via Cholesky: sXX = C'C
+  sXX <- crossprod(X) / n
+  sXY <- crossprod(X, Y)   / n
+
+
   C <- chol(sXX)
-  # b = solve(sXX, sXY)
+
   b <- backsolve(C, forwardsolve(t(C), sXY))
 
   if (!se) {
-    return(list(coef = b, sXX = sXX))
+    res <- list(coef = b, sXX = sXX)
+    class(res) <- c("mlbc_fit", "mlbc_ols")
+    return(res)
   }
 
-  # vectorized Omega = X' diag(u^2) X
-  u     <- drop(Y - X %*% b)
-  Xu    <- X * u                     # each row i scaled by u[i]
-  Omega <- crossprod(Xu)             # = t(Xu) %*% Xu
 
-  invXX <- chol2inv(C)               # = solve(sXX)
+  u     <- drop(Y - X %*% b)
+  Xu    <- X * u
+  Omega <- crossprod(Xu)
+
+  invXX <- chol2inv(C)
   V     <- invXX %*% Omega %*% invXX / (n^2)
 
-  list(coef = b, vcov = V, sXX = sXX)
+  res <- list(coef = b, vcov = V, sXX = sXX)
+  class(res) <- c("mlbc_fit", "mlbc_ols")
+  res
 }

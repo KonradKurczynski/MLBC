@@ -1,0 +1,9 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.git$
+^\.github(/|$)
+^\.gitignore$
+^\.DS_Store$
+^Ex1\.md$
+^Ex1\.Rmd$
+^Readme\.md$

@@ -65,7 +65,6 @@ generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
   # heteroskedastic noise: σ₁ when X=1, σ₀ when X=0
   Y <- b0 + b1*X + (a1*X + a0*(1 - X)) * eps
   
-  # split into train vs test
   train_Y   <- Y[       1:n    ]
   train_X   <- cbind(Xhat[    1:n],    rep(1, n))
   test_Y    <- Y[(n+1):N      ]
@@ -81,7 +80,7 @@ generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
   )
 }
 ```
-
+wg
 ## Estimation and bias correction
 
 ```{r}
@@ -155,6 +154,7 @@ cov_series <- setNames(cov_dict, names(methods))
 print(cov_series)
 
 ```
+
 ```{r}
 method_names <- names(methods)
 
@@ -188,6 +188,9 @@ for(i in seq_len(nmethods)) {
 
 print(df)
 ```
+
+
+
 
 
 

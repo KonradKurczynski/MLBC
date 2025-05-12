@@ -1,5 +1,5 @@
 # MLBC
- This repository hosts the code for the **MLBC** package, implementing bias corrction methods described in [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585). <mark> A sample application of this package can be found in the file [ex1.Rmd]((https://github.com/KonradKurczynski/MLBC/blob/main/Ex1.Rmd)). 
+ This repository hosts the code for the **MLBC** package, implementing bias corrction methods described in [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585). <mark> A sample application of this package can be found in the file ex1.Rmd. 
 
  ## Getting Started 
 This package can be installed from CRAN by typing
