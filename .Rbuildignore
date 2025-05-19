@@ -1,0 +1,20 @@
+# Version control
+^\.git$
+^\.gitignore$
+
+# RStudio/project junk
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.Rhistory$
+^\.RData$
+
+# macOS cruft
+^\.DS_Store$
+
+# Auxiliary docs you don’t want on CRAN
+^Ex1\.Rmd$
+^Ex1\.md$
+
+# Compiled artifacts (just in case)
+^src/.+\.(o|so|dll|dSYM)$
+^LICENSE\.md$

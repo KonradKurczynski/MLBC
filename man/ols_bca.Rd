@@ -30,7 +30,6 @@ Computes the additive bias correction (BCA) for an OLS
 regression when the primary regressor is measured by an ML/AI method.
 }
 \examples{
-\dontrun{
 # unlabeled:
 Nunl      <- 1e4
 Xtrue_unl <- rbinom(Nunl, 1, 0.2)
@@ -53,7 +52,6 @@ fit_bca <- ols_bca(
   intercept= TRUE
 )
 print(fit_bca)
-}
 
 }
 \references{
