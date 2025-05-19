@@ -50,7 +50,7 @@ This method jointly estimates the upstream (measurement) and downstream (regress
 - **gshape, gscale**: numeric; shape 7 scale for gamma (only used if `distribution` = "gamma")
 - **ba, bb**: numeric; alpha & beta for beta distribution (only if `distribution` = "beta)
 - **intercept**: logical; if True, an intercept term will be estimated
-- 
+
 **Returns**
 An object of class mlbc_fit and subclass mlbc_onestep, a list with elements: 
 - **coef**: Numeric vector of bias-corrected coefficients (intercept first, if requested).
