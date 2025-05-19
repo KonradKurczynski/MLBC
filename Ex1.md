@@ -145,8 +145,8 @@ coverage <- function(bgrid, b, se) {
 true_beta1 <- 1.0
 
 methods <- c(
-  "OLS ĥ"  = 1,
-  "OLS θ̂"  = 2,
+  "OLS θ̂"  = 1,
+  "OLS θ"  = 2,
   "BCA-0"  = 3,
   "BCA-1"  = 4,
   "BCA-2"  = 5,
