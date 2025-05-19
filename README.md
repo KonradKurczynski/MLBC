@@ -8,47 +8,56 @@ This package can be installed from CRAN by typing
  ## ols_bca
 This procedure first computes the standard OLS estimator on a design matrix (Xhat), the first column of which contains AI/ML-generated binary labels, and then applies an additive correction based on an estimate (fpr) of the false-positive rate computed externally. The method also adjusts the variance estimator with a finite-sample correction term to account for the uncertainty in the bias estimation.
 
-    Parameters
-    ----------
-    Y : array_like, shape (n,)
-        Response variable vector.
-    Xhat : array_like, shape (n, d)
-        Design matrix, the first column of which contains the AI/ML-generated binary covariates.
-    fpr : float
-        False positive rate of misclassification, used to correct the OLS estimates.
-    m : int or float
-        Size of the external sample used to estimate the classifier's false-positive rate. Can be set to 'inf' when the false-positive rate is known exactly.
+**Parameters**
 
-    Returns
-    -------
-    b : ndarray, shape (d,)
-        Bias-corrected regression coefficient estimates.
-    V : ndarray, shape (d, d)
-        Adjusted variance-covariance matrix for the bias-corrected estimator.
+- **Y**: Numeric vector of responses.
+- **Xhat**: Numeric matrix of regressors in which the first column must be the ML-generated variable to correct.
+- **fpr**: Numeric. Estimated false-positive rate of the generated regressor.
+- **m**: Integer. Size of the validation (labeled) sample used to estimate `fpr`.
+- **intercept**: Logical; if `TRUE`, an intercept column of 1’s is prepended.
 
+**Returns**
+An object of class mlbc_fit and subclass mlbc_bca, a list with elements: 
+- **coef**: Numeric vector of bias-corrected coefficients (intercept first, if requested).
+- **vcov**: Variance–covariance matrix of those coefficients.
+
+
+ ## ols_bcm
+This procedure first computes the standard OLS estimator on a design matrix (Xhat), the first column of which contains AI/ML-generated binary labels, and then applies an additive correction based on an estimate (fpr) of the false-positive rate computed externally. The method also adjusts the variance estimator with a finite-sample correction term to account for the uncertainty in the bias estimation.
+**Parameters**
+
+- **Y**: Numeric vector of responses.
+- **Xhat**: Numeric matrix of regressors in which the first column must be the ML-generated variable to correct.
+- **fpr**: Numeric. Estimated false-positive rate of the generated regressor.
+- **m**: Integer. Size of the validation (labeled) sample used to estimate `fpr`.
+- **intercept**: Logical; if `TRUE`, an intercept column of 1’s is prepended.
+
+**Returns**
+An object of class mlbc_fit and subclass mlbc_bcm, a list with elements: 
+- **coef**: Numeric vector of bias-corrected coefficients (intercept first, if requested).
+- **vcov**: Variance–covariance matrix of those coefficients.
 
  ## one_step
 
-This method jointly estimates the upstream (measurement) and downstream (regression) models using only the unlabeled likelihood. Leveraging JAX for automatic differentiation and optimization, it minimizes the negative log-likelihood to obtain the regression coefficients. The variance is then approximated via the inverse Hessian at the optimum.
+This method jointly estimates the upstream (measurement) and downstream (regression) models using only the unlabeled likelihood. Leveraging TMB, it minimizes the negative log-likelihood to obtain the regression coefficients. The variance is then approximated via the inverse Hessian at the optimum.
 
-    Parameters
-    ----------
-    Y : array_like, shape (n,)
-        Response variable vector.
-    Xhat : array_like, shape (n, d)
-        Design matrix constructed from AI/ML-generated regressors.
-    homoskedastic : bool, optional (default: False)
-        If True, assumes a common error variance; otherwise, separate error variances are estimated.
-    distribution : allows to specify the distribution of error terms, optional. By default, it's Normal(0,1).
-        A custom distribution can be passed down as any jax-compatible PDF function that takes inputs (x, loc, scale).
+**Parameters**
+- **Y**: Numeric response vector
+- **Xhat**: Numeric matrix of regressors excluding the intercept. The first column should be the ML-generated regressor to correct
+- **homoskedastic**: logical; if True, assume a single error variance
+- **distribution**: character; one of "normal", "t", "laplace", "gamma", or "beta". Specifies which conditional density to use for residuals in the likelihood estimation
+- **nu**: numeric; degrees of freedom (only used if `distribution = "t"`)
+- **gshape, gscale**: numeric; shape 7 scale for gamma (only used if `distribution` = "gamma")
+- **ba, bb**: numeric; alpha & beta for beta distribution (only if `distribution` = "beta)
+- **intercept**: logical; if True, an intercept term will be estimated
+- 
+**Returns**
+An object of class mlbc_fit and subclass mlbc_onestep, a list with elements: 
+- **coef**: Numeric vector of bias-corrected coefficients (intercept first, if requested).
+- **vcov**: Variance–covariance matrix of those coefficients.
 
-    Returns
-    -------
-    b : ndarray, shape (d,)
-        Estimated regression coefficients extracted from the optimized parameter vector.
-    V : ndarray, shape (d, d)
-        Estimated variance-covariance matrix for the regression coefficients, computed as the inverse 
-        of the Hessian of the objective function.
+
+
 
 # MLBC: example 1
 
