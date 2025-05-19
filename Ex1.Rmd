@@ -101,15 +101,15 @@ for (i in seq_len(nsim)) {
   for (j in 1:3) {
     fpr_bayes <- (fpr_hat * m + alpha[j]) / (m + alpha[j] + beta[j])
     
-    bca_res <- ols_bca(tY, tX, fpr_bayes, m)
+    bca_res <- ols_bca(tY, tX, fpr_bayes, m, intercept=FALSE)
     update_results(bca_res$coef, bca_res$vcov, i, 2 + j)
     
-    bcm_res <- ols_bcm(tY, tX, fpr_bayes, m)
+    bcm_res <- ols_bcm(tY, tX, fpr_bayes, m, intercept=FALSE)
     update_results(bcm_res$coef, bcm_res$vcov, i, 5 + j)
   }
   
   # 9) One‑step estimator
-  one_res <- one_step(tY, tX)
+  one_res <- one_step(tY, tX, intercept=FALSE)
   update_results(one_res$coef, one_res$cov, i, 9)
   
   if (i %% 100 == 0) {
@@ -187,7 +187,6 @@ for(i in seq_len(nmethods)) {
 
 print(df)
 ```
-
 
 
 
