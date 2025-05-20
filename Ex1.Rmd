@@ -130,8 +130,7 @@ for (i in seq_len(nsim)) {
   fit_os <- one_step(Y ~ Xhat,
                      data          = train_df,
                      homoskedastic = FALSE,
-                     distribution  = "normal",
-                     intercept     = TRUE)
+                     distribution  = "normal")
   update_results(fit_os$coef, fit_os$cov, i, 9)
   
   if (i %% 100 == 0) {

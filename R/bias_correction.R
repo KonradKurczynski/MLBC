@@ -19,41 +19,41 @@ ols_bca <- function(Y, Xhat = NULL, fpr, m, intercept = TRUE, gen_idx = 1, ...) 
 #' @rdname ols_bca
 #' @method ols_bca default
 #' @export
-ols_bca.default <- function(Y, Xhat, fpr, m,
-                            intercept = TRUE, gen_idx = 1, ...) {
+ols_bca.default <- function(Y, Xhat, fpr, m, intercept = TRUE, gen_idx = 1, ...) {
   Y    <- as.numeric(Y)
   Xhat <- as.matrix(Xhat)
   if (intercept) {
-    Xhat    <- cbind(Intercept = 1, Xhat)
+    Xhat <- cbind(Intercept = 1, Xhat)
     gen_idx <- gen_idx + 1L
   }
-
   orig <- ols(Y, Xhat, se = TRUE, intercept = FALSE)
   b0   <- as.numeric(orig$coef)
   V0   <- orig$vcov
   sXX  <- orig$sXX
   d    <- length(b0)
 
-  A     <- matrix(0, d, d)
+  A         <- matrix(0, d, d)
   A[gen_idx, gen_idx] <- 1
-  Gamma <- solve(sXX, A)
-  I     <- diag(d)
-  Minv  <- solve(I + fpr * Gamma)
+  Gamma     <- solve(sXX, A)
+  I         <- diag(d)
+  Minv      <- solve(I + fpr * Gamma)
 
-  b_raw <- as.numeric(   b0   + fpr * (Gamma %*% b0)     )
-  V1    <-         Minv %*% V0 %*% t(Minv)
+  b_raw <- b0 + fpr * (Gamma %*% b0)
+  V1    <- Minv %*% V0 %*% t(Minv)
   V2    <- (fpr * (1 - fpr) / m) *
     (Gamma %*% (V0 + tcrossprod(b0)) %*% t(Gamma))
   V_raw <- V1 + V2
 
-  # give them names so helper can reorder
-  names(b_raw) <- colnames(Xhat)
-  colnames(V_raw) <- rownames(V_raw) <- colnames(Xhat)
-
-  # ---- generic reorder, works for any # of slopes ----
-  reordered <- .reorder_intercept(b_raw, V_raw)
-  b <- reordered$coef
-  V <- reordered$vcov
+  if (intercept) {
+    perm <- c(gen_idx, setdiff(seq_len(d), gen_idx))
+    b    <- as.numeric(b_raw[perm])
+    V    <- V_raw[perm, perm]
+    names(b) <- colnames(Xhat)[perm]
+  } else {
+    b    <- as.numeric(b_raw)
+    V    <- V_raw
+    names(b) <- colnames(Xhat)
+  }
 
   out <- list(coef = b, vcov = V)
   class(out) <- c("mlbc_fit", "mlbc_bca")
@@ -95,39 +95,42 @@ ols_bcm <- function(Y, Xhat = NULL, fpr, m, intercept = TRUE, gen_idx = 1, ...) 
 #' @rdname ols_bcm
 #' @method ols_bcm default
 #' @export
-ols_bcm.default <- function(Y, Xhat, fpr, m,
-                            intercept = TRUE, gen_idx = 1, ...) {
+ols_bcm.default <- function(Y, Xhat, fpr, m, intercept = TRUE,
+                            gen_idx = 1, ...) {
   Y    <- as.numeric(Y)
   Xhat <- as.matrix(Xhat)
   if (intercept) {
-    Xhat    <- cbind(Intercept = 1, Xhat)
+    Xhat <- cbind(Intercept = 1, Xhat)
     gen_idx <- gen_idx + 1L
   }
-
   orig <- ols(Y, Xhat, se = TRUE, intercept = FALSE)
   b0   <- as.numeric(orig$coef)
   V0   <- orig$vcov
   sXX  <- orig$sXX
   d    <- length(b0)
 
-  A     <- matrix(0, d, d)
+  A       <- matrix(0, d, d)
   A[gen_idx, gen_idx] <- 1
-  Gamma <- solve(sXX, A)
-  I     <- diag(d)
-  Minv  <- solve(I - fpr * Gamma)
+  Gamma   <- solve(sXX, A)
+  I       <- diag(d)
+  Minv    <- solve(I - fpr * Gamma)
 
-  b_raw <- as.numeric( Minv %*% b0 )
-  V1    <-         Minv %*% V0 %*% t(Minv)
+  b_raw <- Minv %*% b0
+  V1    <- Minv %*% V0 %*% t(Minv)
   V2    <- (fpr * (1 - fpr) / m) *
     (Gamma %*% (V0 + tcrossprod(b_raw)) %*% t(Gamma))
   V_raw <- V1 + V2
 
-  names(b_raw) <- colnames(Xhat)
-  colnames(V_raw) <- rownames(V_raw) <- colnames(Xhat)
-
-  reordered <- .reorder_intercept(b_raw, V_raw)
-  b <- reordered$coef
-  V <- reordered$vcov
+  if (intercept) {
+    perm <- c(gen_idx, setdiff(seq_len(d), gen_idx))
+    b    <- as.numeric(b_raw[perm])
+    V    <- V_raw[perm, perm]
+    names(b) <- colnames(Xhat)[perm]
+  } else {
+    b    <- as.numeric(b_raw)
+    V    <- V_raw
+    names(b) <- colnames(Xhat)
+  }
 
   out <- list(coef = b, vcov = V)
   class(out) <- c("mlbc_fit", "mlbc_bcm")
@@ -150,18 +153,18 @@ ols_bcm.formula <- function(Y, Xhat = NULL, data = parent.frame(),
                   gen_idx   = gen_idx, ...)
 }
 
-
 .reorder_intercept <- function(coef, vcov) {
   nm   <- names(coef)
+  # find the intercept
   ints <- match("(Intercept)", nm, nomatch = 0L)
   if (ints == 0L) {
-    # no intercept → leave as-is
+    # no intercept: return as-is
     return(list(coef = coef, vcov = vcov))
   }
-  perm       <- c(ints, seq_along(coef)[-ints])
-  coef_new   <- coef[perm]
-  vcov_new   <- vcov[perm, perm, drop = FALSE]
-  names(coef_new)               <- nm[perm]
-  colnames(vcov_new) <- rownames(vcov_new) <- nm[perm]
+  # build permutation: intercept first, then all others
+  perm <- c(ints, seq_along(coef)[-ints])
+  coef_new <- coef[perm]
+  vcov_new <- vcov[perm, perm, drop = FALSE]
+  names(coef_new) <- colnames(vcov_new) <- nm[perm]
   list(coef = coef_new, vcov = vcov_new)
 }
