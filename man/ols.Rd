@@ -2,22 +2,41 @@
 % Please edit documentation in R/OLS.R
 \name{ols}
 \alias{ols}
-\title{Ordinary least squares (and heteroskedastic‐robust SEs)}
+\alias{ols.default}
+\alias{ols.formula}
+\title{Ordinary least squares (and heteroskedastic-robust SEs)}
 \usage{
-ols(Y, X, se = TRUE, intercept = FALSE)
+ols(Y, X = NULL, se = TRUE, intercept = FALSE, ...)
+
+\method{ols}{default}(Y, X, se = TRUE, intercept = FALSE, ...)
+
+\method{ols}{formula}(Y, data = parent.frame(), se = TRUE, intercept = TRUE, ...)
 }
 \arguments{
-\item{Y}{numeric response}
+\item{Y}{numeric response vector, or a one-sided formula}
 
-\item{X}{numeric design matrix}
+\item{X}{numeric design matrix (if \code{Y} is numeric)}
 
-\item{se}{logical; return SEs?}
+\item{se}{logical; return heteroskedasticity-robust SEs?}
 
-\item{intercept}{logical; include an intercept term in estimation?}
+\item{intercept}{logical; include an intercept term?}
+
+\item{...}{unused}
+
+\item{data}{data frame (if \code{Y} is a formula)}
 }
 \value{
-list(coef, vcov, sXX) or list(coef, sXX)
+An object of class \code{mlbc_fit} and \code{mlbc_ols} with elements:
+\itemize{
+\item \code{coef}: coefficient vector
+\item \code{vcov}: variance–covariance matrix (if \code{se = TRUE})
+\item \code{sXX}: scaled crossproduct \verb{X'X/n}
+}
 }
 \description{
-Ordinary least squares (and heteroskedastic‐robust SEs)
+Can be called either as
+\itemize{
+\item \code{ols(Y, X, se, intercept)} where \code{Y} is a numeric vector and \code{X} a matrix, or
+\item \code{ols(formula, data, se, intercept)} using a one-sided formula like \code{y ~ x1 + x2}.
+}
 }
