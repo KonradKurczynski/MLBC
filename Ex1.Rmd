@@ -89,11 +89,11 @@ for (i in seq_len(nsim)) {
   eY    <- dat$test_Y;     eXhat <- dat$test_Xhat;  eX <- dat$test_X
   
   # 1) OLS on unlabeled (X̂)
-  ols_res <- ols(tY, tX)
+  ols_res <- ols(tY, tX, intercept = FALSE)
   update_results(ols_res$coef,  ols_res$vcov, i, 1)
   
   # 2) OLS on labeled (true X)
-  ols_res <- ols(eY, eX)
+  ols_res <- ols(eY, eX, intercept = FALSE)
   update_results(ols_res$coef,  ols_res$vcov, i, 2)
   
   # 3–8) Additive & multiplicative bias‑corrections
@@ -189,4 +189,28 @@ print(df)
 ```
 
 
+```{r}
+n     <- 200
+p     <- 0.3
+Xtrue <- rbinom(n, 1, p)
+# ML regressor with 10% false positives
+Xhat  <- ifelse(runif(n) < 0.10, 1 - Xtrue, Xtrue)
+Y     <- 1 + 2 * Xtrue + rnorm(n)
+
+# 2) Small validation set to estimate fpr
+m        <- 50
+Xval_t   <- rbinom(m, 1, p)
+Xval_h   <- ifelse(runif(m) < 0.10, 1 - Xval_t, Xval_t)
+fpr_hat  <- mean(Xval_h == 1 & Xval_t == 0)
+
+# 3) One‐step TMB estimator (Normal), with intercept
+fit <- one_step(
+  Y            = Y,
+  Xhat         = matrix(Xhat, ncol = 1, dimnames = list(NULL, "Xhat")),
+  homoskedastic = FALSE,
+  distribution  = "normal",
+  intercept     = TRUE
+)
+print(fit)
+```
 

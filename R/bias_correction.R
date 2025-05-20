@@ -50,7 +50,6 @@ ols_bcm <- function(Y, Xhat, fpr, m, intercept = TRUE) {
     gen_idx <- 1L
   }
 
-
   orig <- ols(Y, Xhat, se = TRUE)
   b0   <- as.numeric(orig$coef)
   V0   <- orig$vcov
@@ -89,6 +88,7 @@ ols_bcm <- function(Y, Xhat, fpr, m, intercept = TRUE) {
   class(out) <- c("mlbc_fit", "mlbc_bcm")
   out
 }
+
 #' Additive bias‐corrected OLS estimator
 #'
 #' Computes the additive bias correction (BCA) for an OLS

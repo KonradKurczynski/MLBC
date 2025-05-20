@@ -4,7 +4,7 @@
 \alias{ols}
 \title{Ordinary least squares (and heteroskedastic‐robust SEs)}
 \usage{
-ols(Y, X, se = TRUE)
+ols(Y, X, se = TRUE, intercept = FALSE)
 }
 \arguments{
 \item{Y}{numeric response}
@@ -12,6 +12,8 @@ ols(Y, X, se = TRUE)
 \item{X}{numeric design matrix}
 
 \item{se}{logical; return SEs?}
+
+\item{intercept}{logical; include an intercept term in estimation?}
 }
 \value{
 list(coef, vcov, sXX) or list(coef, sXX)

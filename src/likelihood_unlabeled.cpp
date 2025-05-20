@@ -1,4 +1,6 @@
 // src/likelihood_unlabeled.cpp
+#include <cmath>             // for log(), exp(), fabs(), M_PI           // for dgamma(), dbeta()
+#include <R_ext/Error.h>     // for Rf_error()
 #include <TMB.hpp>
 
 template<class Type>
@@ -68,26 +70,13 @@ Type objective_function<Type>::operator() () {
       Type z1 = (yi - (mu_i - b[0])) / sigma0;
       Type z2 = (yi - (mu_i + b[0])) / sigma1;
       Type z3 = (yi - mu_i) / sigma1;
-      // log‐pdf of t_nu(x;μ,σ)
-      auto lt = [&](Type z){
-        return lgamma((nu+1)/2) - lgamma(nu/2)
-        - Type(0.5)*log(nu*M_PI)
-        - log(sigma0)  // use sigma0 or sigma1 as needed below
-        - (nu+1)/2 * log(Type(1) + z*z/nu);
-      };
-      l1 = lgamma((nu+1)/2) - lgamma(nu/2)
-        - Type(0.5)*log(nu*M_PI) - log(sigma0)
-        - (nu+1)/2 * log(Type(1) + z0*z0/nu);
-        l2 = lgamma((nu+1)/2) - lgamma(nu/2)
-          - Type(0.5)*log(nu*M_PI) - log(sigma0)
-          - (nu+1)/2 * log(Type(1) + z1*z1/nu);
-          l3 = lgamma((nu+1)/2) - lgamma(nu/2)
-            - Type(0.5)*log(nu*M_PI) - log(sigma1)
-            - (nu+1)/2 * log(Type(1) + z2*z2/nu);
-            l4 = lgamma((nu+1)/2) - lgamma(nu/2)
-              - Type(0.5)*log(nu*M_PI) - log(sigma1)
-              - (nu+1)/2 * log(Type(1) + z3*z3/nu);
-              break;
+      // precompute constant
+      Type tconst = lgamma((nu+1)/2) - lgamma(nu/2) - Type(0.5)*log(nu*M_PI);
+      l1 = tconst - log(sigma0) - (nu+1)/2 * log(Type(1) + z0*z0/nu);
+      l2 = tconst - log(sigma0) - (nu+1)/2 * log(Type(1) + z1*z1/nu);
+      l3 = tconst - log(sigma1) - (nu+1)/2 * log(Type(1) + z2*z2/nu);
+      l4 = tconst - log(sigma1) - (nu+1)/2 * log(Type(1) + z3*z3/nu);
+      break;
     }
     case 3: { // Laplace
       l1 = -log(Type(2)*sigma0) - fabs(yi - mu_i)/sigma0;
@@ -96,17 +85,14 @@ Type objective_function<Type>::operator() () {
       l4 = -log(Type(2)*sigma1) - fabs(yi - mu_i)/sigma1;
       break;
     }
-    case 4: { // Gamma(shape=gshape, scale=gscale), yi>0
-      l1 = (gshape-1)*log(yi) - yi/gscale
-      - lgamma(gshape) - gshape*log(gscale);
-      // shift mu by b*X as above
-      // but Gamma typically models positive continuous -- you may omit shifts
-      l2 = l1; l3 = l1; l4 = l1; // or alter if desired
+    case 4: { // Gamma(shape=gshape, scale=gscale)
+      l1 = dgamma(yi, gshape, gscale, true);
+      l2 = l1;  l3 = l1;  l4 = l1;
       break;
     }
-    case 5: { // Beta(a=ba, b=bb), 0<yi<1
-      l1 = (ba-1)*log(yi) + (bb-1)*log(Type(1)-yi) - lbeta(ba,bb);
-      l2 = l1; l3 = l1; l4 = l1;
+    case 5: { // Beta(alpha=ba, beta=bb)
+      l1 = dbeta(yi, ba, bb, true);
+      l2 = l1;  l3 = l1;  l4 = l1;
       break;
     }
     default:
