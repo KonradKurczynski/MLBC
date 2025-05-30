@@ -1,0 +1,86 @@
+---
+title: "Exammple 1"
+author: "Konrad Kurczynski"
+date: "`r Sys.Date()`"
+output: 
+  md_document:
+    variant: gfm
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r}
+library(MLBC)
+```
+
+# About this notebook
+
+This notebook estimates models for the association between salaries and remote work being offered for 
+a sample of job postings, reproducing the results reported in Table 1 of [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585). 
+
+## The Dataset
+
+The data set classifies job postings available from Lightcast
+
+1.  `city_name`: city of the job posting
+
+2.  `naics_2022_2` : type of a business
+
+3.  `id`: unique identifier of the job posting
+
+4.  `salary`: salary offered
+
+5.  `wfh_wham`: **binary label generated via ML, indicating whether
+    remote work is offered**
+
+6.  `soc_2021_2`: occupation code
+
+7.  `employment_type_name`: part time/full time indication
+
+
+```{r}
+SD_data <- MLBC::SD_data
+SD_data$salary <- log(SD_data$salary)
+head(SD_data)
+```
+
+# ML-classification error
+
+We're trying to estimate the association between the salary offered and whether the
+job offers remote work, using a binary label `wfh_wham` imputed through
+machine learning. We know that the false positive rate of the flag is
+about `0.009`, which was calculated using a sample of `1000` postings. 
+
+We will estimate the model for this association both ignoring the fixed effects of 
+employment and occupation type and controlling for them it (variables `soc_2021_2` and
+`employment_type_name`).
+
+## Results ignoring fixed effects
+
+```{r}
+lm_SD_1 <- ols(salary ~ wfh_wham, data = SD_data)
+summary(lm_SD_1)
+```
+```{r}
+SD_bcm_1 <- ols_bcm(salary ~ wfh_wham, data = SD_data, fpr = 0.009, m = 1000)
+summary(SD_bcm_1)
+```
+
+```{r}
+os_SD_1 <- one_step(salary ~ wfh_wham, data = SD_data)
+summary(os_SD_1)
+```
+
+## Results accounting for fixed effects
+
+```{r}
+SD_bcm_2 <- ols_bcm(salary ~ wfh_wham + soc_2021_2 + employment_type_name, data = SD_data, fpr = 0.009, m = 1000)
+summary(SD_bcm_2)
+```
+
+```{r}
+os_SD_2 <- one_step(salary ~ wfh_wham + soc_2021_2 + employment_type_name, data = SD_data)
+summary(os_SD_2) 
+```
+Note: the results for `one_step` estimates diverge from those reported in the "Joint" column of Table 1 in the paper as those were generated using a Gaussian mixture model not yet available in the package
