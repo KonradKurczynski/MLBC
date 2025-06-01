@@ -1,0 +1,208 @@
+---
+title: "CEO Time Use and Firm Performance: A Topic Model Application"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{CEO Time Use and Firm Performance: A Topic Model Application}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+```{r}
+library(MLBC)
+```
+
+# About this notebook
+
+This notebook estimates models for the association between CEO time allocation and firm performance, reproducing results from Table 2 of [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585). The analysis demonstrates bias correction methods for ML-generated regressors in the context of topic modeling.
+
+## The Dataset
+
+The role of CEOs in shaping firm performance is important for many academic and policy debates, but until recently little data existed on what CEOs do with their time. To fill this void, Bandiera et al. (2020) collects diary data on a set of CEO activities from a sample of manufacturing firms. The paper describes salient differences in executive time use and relates these differences to firm and CEO characteristics and firm outcomes.
+
+The survey consists of five questions with categorical responses: (Q1) the type of activity (meeting, public event, etc.); (Q2) duration of activity (15m, 30m, etc.); (Q3) whether the activity is planned or unplanned; (Q4) the number of participants in the activity; (Q5) the function of the participants in the activity (HR, finance, suppliers, etc.). Survey responses are recorded for each 15-minute interval of a given week, e.g. Monday 8am-8:15am, Monday 8:15am-8:30am, and so forth. The sample consists of V = 654 answer combinations observed across the five questions.
+
+The data are modeled as a topic model, with **K = 2 topics**. The estimated **β̂₁** places relatively higher mass on features associated with "management," like communicating with other C-suite executives and holding large, multi-function meetings, or suppliers, while **β̂₂** places relatively higher mass on features associated with "leadership" - like communicating with other C-suite executives and holding large, multi-function meetings.
+
+```{r}
+# Load the topic model data
+data("topic_model_data")
+
+# Extract components
+Z <- as.matrix(topic_model_data$covars)              # Control variables
+estimation_data <- topic_model_data$estimation_data   # Main dataset  
+gamma_draws <- as.matrix(topic_model_data$gamma_draws) # MCMC draws
+theta_est_full <- as.matrix(topic_model_data$theta_est_full)   # Full sample topic estimates
+theta_est_samp <- as.matrix(topic_model_data$theta_est_samp)   # Subsample topic estimates
+beta_est_full <- as.matrix(topic_model_data$beta_est_full)     # Full sample topic-word distributions
+beta_est_samp <- as.matrix(topic_model_data$beta_est_samp)     # Subsample topic-word distributions
+lda_data <- as.matrix(topic_model_data$lda_data)      # LDA validation data
+
+# Dependent variable: log employment, country fixed effects, and survey-wave fixed effects
+Y <- estimation_data$ly
+sigma_y <- sd(Y)
+
+# Show sample of the data
+sample_data <- data.frame(
+  Y = Y,
+  theta_topic1 = theta_est_full[, 1], 
+  control1 = Z[, 1], 
+  control2 = Z[, 2]
+)
+head(sample_data)
+```
+
+# Estimation Strategy
+
+The paper's use of the two-step strategy may, however, lead to invalid inference. To explore this possibility, we first replicate the authors' two-step strategy, estimating **θ̂ᵢ** by LDA, then regressing the log value of each CEO's firm on **θ̂ᵢ** and controls including log employment, country fixed effects, and survey-wave fixed effects.
+
+## Two-Step Approach
+
+The two-step approach now estimates a smaller insignificant effect, while both bias correction and joint estimation continue to estimate a significant effect.
+
+```{r}
+# Full sample two-step estimation
+theta_full <- theta_est_full
+Xhat_full <- cbind(theta_full[, 1], Z)  # First topic + controls
+lm_full <- ols(Y, Xhat_full, se = TRUE, intercept = TRUE)
+summary(lm_full)
+```
+
+```{r}
+# 10% Subsample two-step estimation  
+theta_samp <- theta_est_samp
+Xhat_samp <- cbind(theta_samp[, 1], Z)
+lm_samp <- ols(Y, Xhat_samp, se = TRUE, intercept = TRUE)
+summary(lm_samp)
+```
+
+## Bias Correction
+
+The empirical analogue of this expression is **θ̂ᵢ** for the simple model. While not directly applicable here as the topic model structure is more complex, it still allows one to qualitatively compare sampling error (reflected by **ζ̂ⱼ⁻¹**) and measurement error (reflected by **ε̂ [ζ̂ⱼ⁻¹]**). The empirical analogue of this expression is 0.44.
+
+```{r}
+# Full sample bias correction
+kappa_full <- mean(1.0 / lda_data[, 1]) * sqrt(nrow(lda_data))
+S <- matrix(c(1.0, 0.0), nrow = 1)  # Topic loadings: first topic active
+
+bc_full <- ols_bca_topic(Y = Y,
+                         Q = Z,                    # Control variables  
+                         W = theta_est_full,       # Document-topic proportions
+                         S = S,                    # Topic loadings
+                         B = beta_est_full,        # Topic-word distributions
+                         k = kappa_full)           # Scaling parameter
+summary(bc_full)
+```
+
+```{r}
+# 10% Subsample bias correction
+kappa_samp <- mean(1.0 / lda_data[, 2]) * sqrt(nrow(lda_data))
+
+bc_samp <- ols_bca_topic(Y = Y,
+                         Q = Z,
+                         W = theta_est_samp,
+                         S = S, 
+                         B = beta_est_samp,
+                         k = kappa_samp)
+summary(bc_samp)
+```
+
+## Joint Estimation
+
+In other words, there are a relatively large number of survey responses per CEO compared to the number of surveyed CEOs, meaning the measurement error in **θ̂ᵢ** is small relative to sampling error. To increase measurement error, we take a random 10% subsample of survey responses for each CEO, which can be thought of as observing half a day of behavior rather than a five-day workweek.
+
+```{r}
+set.seed(123456)
+
+# Joint estimation using MCMC draws (scaled by dependent variable standard deviation)
+gamma_scaled <- gamma_draws * sigma_y
+gamma_hat_1 <- colMeans(gamma_scaled)
+
+# Calculate empirical confidence intervals from MCMC draws
+alpha <- 0.05
+ci_lower_1 <- apply(gamma_scaled, 2, quantile, probs = alpha/2)
+ci_upper_1 <- apply(gamma_scaled, 2, quantile, probs = 1 - alpha/2)
+
+cat("Joint estimation results:\n")
+cat("Topic 1 coefficient:", round(gamma_hat_1[1], 3), 
+    " [", round(ci_lower_1[1], 3), ",", round(ci_upper_1[1], 3), "]\n")
+cat("Topic 2 coefficient:", round(gamma_hat_1[2], 3),
+    " [", round(ci_lower_1[2], 3), ",", round(ci_upper_1[2], 3), "]\n")
+```
+
+## Comparison of Methods
+
+What's more, neither bias correction nor joint estimation shifts the estimated coefficient upward by a large amount. This shows that bias is not an inevitable part of using AI/ML-generated variables, but rather depends on the empirical setting.
+
+```{r}
+# Extract key coefficients for the first topic (management)
+results <- data.frame(
+  Sample = c("Full", "10% Subsample", "Full", "10% Subsample", "Full"),
+  Method = c("Two-Step", "Two-Step", "Bias Correction", "Bias Correction", "Joint"),
+  Estimate = c(lm_full$coef[1],
+               lm_samp$coef[1], 
+               bc_full$coef[1],
+               bc_samp$coef[1],
+               gamma_hat_1[1]),
+  CI_Lower = c(lm_full$coef[1] - 1.96 * sqrt(lm_full$vcov[1,1]),
+               lm_samp$coef[1] - 1.96 * sqrt(lm_samp$vcov[1,1]),
+               bc_full$coef[1] - 1.96 * sqrt(bc_full$vcov[1,1]),
+               bc_samp$coef[1] - 1.96 * sqrt(bc_samp$vcov[1,1]),
+               ci_lower_1[1]),
+  CI_Upper = c(lm_full$coef[1] + 1.96 * sqrt(lm_full$vcov[1,1]),
+               lm_samp$coef[1] + 1.96 * sqrt(lm_samp$vcov[1,1]),
+               bc_full$coef[1] + 1.96 * sqrt(bc_full$vcov[1,1]),
+               bc_samp$coef[1] + 1.96 * sqrt(bc_samp$vcov[1,1]),
+               ci_upper_1[1])
+)
+
+results$Estimate <- round(results$Estimate, 3)
+results$CI_Lower <- round(results$CI_Lower, 3)
+results$CI_Upper <- round(results$CI_Upper, 3)
+
+print(results)
+```
+
+```{r, fig.width=8, fig.height=5}
+if (require(ggplot2, quietly = TRUE)) {
+  plot_data <- results
+  plot_data$Method_Sample <- paste(plot_data$Method, "(", plot_data$Sample, ")")
+  plot_data$Type <- ifelse(plot_data$Method == "Two-Step", "Two-Step",
+                   ifelse(plot_data$Method == "Bias Correction", "Bias Correction", "Joint"))
+  
+  p <- ggplot(plot_data, aes(x = reorder(Method_Sample, Estimate), y = Estimate, color = Type)) +
+    geom_point(size = 3) +
+    geom_errorbar(aes(ymin = CI_Lower, ymax = CI_Upper), width = 0.3, size = 1) +
+    geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
+    coord_flip() +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      panel.grid.minor = element_blank(),
+      plot.title = element_text(size = 12, face = "bold"),
+      plot.subtitle = element_text(size = 10)
+    ) +
+    labs(
+      title = "Estimates of Impact of CEO Behavior on Firm Performance",
+      subtitle = "Comparison of estimation strategies with 95% confidence intervals",
+      x = "Estimation Strategy",
+      y = "Coefficient Estimate",
+      color = "Method Type"
+    ) +
+    scale_color_manual(values = c("Two-Step" = "#56B4E9", 
+                                 "Bias Correction" = "#009E73",
+                                 "Joint" = "#E69F00"))
+  
+  print(p)
+} else {
+  cat("ggplot2 not available for plotting\n")
+}
+```
