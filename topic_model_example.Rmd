@@ -1,10 +1,11 @@
 ---
 title: "CEO Time Use and Firm Performance: A Topic Model Application"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{CEO Time Use and Firm Performance: A Topic Model Application}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+output: 
+  md_document:
+    variant: gfm
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include = FALSE}
