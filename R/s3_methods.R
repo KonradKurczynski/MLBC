@@ -19,7 +19,6 @@ summary.mlbc_fit <- function(object, ...) {
   }
 
 
-
   if ("(Intercept)" %in% orig_names) {
     intercept_idx <- which(orig_names == "(Intercept)")
   } else if ("Intercept" %in% orig_names) {
