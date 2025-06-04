@@ -1,31 +1,59 @@
-#' Compute starting values for TMB
+#' Ultra-minimal version
+#' @param Y Response vector
+#' @param Xhat Design matrix
+#' @param homoskedastic Logical, whether to assume homoskedastic errors
+#' @return Vector of starting parameter values
 #' @noRd
 initial_guess <- function(Y, Xhat, homoskedastic) {
-  ols_out <- ols(Y, Xhat, se = FALSE)
-  b0      <- as.numeric(ols_out$coef)
-  u       <- Y - Xhat %*% b0
-  sigma   <- sd(u)
-  mu      <- Xhat %*% b0
-  pdf     <- function(y,loc,sc) dnorm(y,loc,sc)
-  cond1   <- pdf(Y, mu, sigma) > pdf(Y, mu - b0[1], sigma)
-  cond2   <- pdf(Y, mu + b0[1], sigma) > pdf(Y, mu, sigma)
-  Ximp    <- ifelse(Xhat[,1]==1, cond1, cond2)
-  w00     <- mean((Xhat[,1]==0)&(Ximp==0)); w01 <- mean((Xhat[,1]==0)&(Ximp==1))
-  w10     <- mean((Xhat[,1]==1)&(Ximp==0))
-  v_raw   <- log(c(max(w00,1e-3),max(w01,1e-3),max(w10,1e-3)) /
-                   (1 - (w00+w01+w10)))
-  sigma0  <- sd(u[Ximp==0]); sigma1 <- sd(u[Ximp==1])
-  sigma0  <- ifelse(is.nan(sigma0), sigma1, sigma0)
-  sigma1  <- ifelse(is.nan(sigma1), sigma0, sigma1)
+
+  # OLS estimation
+  b <- solve(crossprod(Xhat), crossprod(Xhat, Y))
+
+  # Residuals and sigma
+  u <- Y - Xhat %*% b
+  sigma <- sd(u)
+
+  # PDF comparisons for imputation
+  mu <- Xhat %*% b
+  X_obs <- Xhat[,1]
+
+  # Vectorized PDF calculations
+  pdf_current <- dnorm(Y, mu, sigma)
+  pdf_alt1 <- dnorm(Y, mu - b[1], sigma)
+  pdf_alt2 <- dnorm(Y, mu + b[1], sigma)
+
+  # Imputation
+  X_imp <- ifelse(X_obs == 1,
+                  as.numeric(pdf_current > pdf_alt1),
+                  as.numeric(pdf_alt2 > pdf_current))
+
+  # Frequencies with minimal bounds
+  freqs <- c(
+    mean((X_obs == 0) & (X_imp == 0)),
+    mean((X_obs == 0) & (X_imp == 1)),
+    mean((X_obs == 1) & (X_imp == 0)),
+    mean((X_obs == 1) & (X_imp == 1))
+  )
+  freqs <- pmax(freqs, 0.001)
+  freqs <- freqs / sum(freqs)
+
+  # Log-ratios
+  v <- log(freqs[1:3] / freqs[4])
+
+  # Component sigmas
+  sigma0 <- sd(u[X_imp == 0])
+  sigma1 <- sd(u[X_imp == 1])
+
+  # Simple NaN handling
+  if (is.na(sigma0)) sigma0 <- sigma
+  if (is.na(sigma1)) sigma1 <- sigma
+
+  # Return result
   if (homoskedastic) {
-    p_imp  <- mean(Ximp)
-    sigma_c<- sigma1*p_imp + sigma0*(1-p_imp)
-    c(b0, v_raw, log(sigma_c))
+    p <- mean(X_imp)
+    sigma_comb <- sigma1 * p + sigma0 * (1 - p)
+    c(b, v, log(sigma_comb))
   } else {
-    c(b0, v_raw, log(sigma0), log(sigma1))
+    c(b, v, log(sigma0), log(sigma1))
   }
 }
-
-#' Subset standard deviation
-#' @noRd
-subset_std <- function(x, mask) sd(x[mask])

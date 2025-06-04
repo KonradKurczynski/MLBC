@@ -12,8 +12,12 @@
 ^\.DS_Store$
 
 # Auxiliary docs you don’t want on CRAN
-^Ex1\.Rmd$
-^Ex1\.md$
+^remote_work\.Rmd$
+^remote_work\.md$
+^synthetic_example\.Rmd$
+^synthetic_example\.md$
+^topic_model_example\.Rmd$
+^topic_model_example\.html$
 
 # Compiled artifacts (just in case)
 ^src/.+\.(o|so|dll|dSYM)$
