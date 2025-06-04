@@ -1,5 +1,4 @@
 #' @useDynLib MLBC, .registration=TRUE
 #' @importFrom TMB MakeADFun
-NULL
-#' @importFrom stats dnorm nlminb sd
+#' @importFrom stats dnorm nlminb sd model.frame model.response model.matrix terms qnorm pnorm optim
 NULL

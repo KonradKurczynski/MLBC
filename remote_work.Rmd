@@ -83,3 +83,5 @@ os_SD_2 <- one_step(salary ~ wfh_wham + soc_2021_2 + employment_type_name, data 
 summary(os_SD_2) 
 ```
 Note: the results for `one_step` estimates diverge from those reported in the "Joint" column of Table 1 in the paper as those were generated using a Gaussian mixture model not yet available in the package
+
+

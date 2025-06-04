@@ -37,6 +37,7 @@ The data are modeled as a topic model, with **K = 2 topics**. The estimated **β
 # Load the topic model data
 data("topic_model_data")
 
+
 # Extract components
 Z <- as.matrix(topic_model_data$covars)              # Control variables
 estimation_data <- topic_model_data$estimation_data   # Main dataset  
@@ -207,3 +208,5 @@ if (require(ggplot2, quietly = TRUE)) {
   cat("ggplot2 not available for plotting\n")
 }
 ```
+
+

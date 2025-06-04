@@ -1,5 +1,5 @@
 Package: MLBC
-Version: 0.2.0
+Version: 0.2.1
 Title: Bias Correction Methods for Models Using Synthetic Data
 Authors@R: c(person("Konrad", "Kurczynski", role = c("aut","cre"), email="konrad.kurczynski@yale.edu"),
       person("Timothy", "Christensen", role = "aut", email="timothy.christensen@yale.edu"))
@@ -8,6 +8,9 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown=TRUE)
 RoxygenNote: 7.3.2
-Imports: TMB
+Imports: TMB, MASS, numDeriv, stats
 LinkingTo: TMB, RcppEigen
 Suggests: roxygen2
+Depends: 
+    R (>= 3.5)
+LazyData: true

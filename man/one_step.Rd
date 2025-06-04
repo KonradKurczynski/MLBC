@@ -4,7 +4,7 @@
 \alias{one_step}
 \alias{one_step.default}
 \alias{one_step.formula}
-\title{One-step estimator for unlabeled data (multi-dist)}
+\title{One-step maximum likelihood estimation}
 \usage{
 one_step(
   Y,
@@ -58,23 +58,23 @@ one_step(
 
 \item{Xhat}{numeric matrix of regressors (if \code{Y} is numeric)}
 
-\item{homoskedastic}{logical; if \code{TRUE}, assume equal error variance}
+\item{homoskedastic}{logical; if \code{TRUE}, assumes a common error variance; otherwise, the error variance is allowed to vary with the true latent binary variable}
 
-\item{distribution}{character; one of \code{"normal"}, \code{"t"}, \code{"laplace"}, \code{"gamma"}, \code{"beta"}}
+\item{distribution}{character; distribution for error terms. One of \code{"normal"}, \code{"t"}, \code{"laplace"}, \code{"gamma"}, \code{"beta"}}
 
-\item{nu}{numeric; degrees of freedom (for Student-t)}
+\item{nu}{numeric; degrees of freedom (for Student-t distribution)}
 
-\item{gshape}{numeric; shape (for Gamma)}
+\item{gshape}{numeric; shape parameter (for Gamma distribution)}
 
-\item{gscale}{numeric; scale (for Gamma)}
+\item{gscale}{numeric; scale parameter (for Gamma distribution)}
 
-\item{ba}{numeric; alpha (for Beta)}
+\item{ba}{numeric; alpha parameter (for Beta distribution)}
 
-\item{bb}{numeric; beta (for Beta)}
+\item{bb}{numeric; beta parameter (for Beta distribution)}
 
 \item{intercept}{logical; if \code{TRUE}, prepend an intercept column to \code{Xhat}}
 
-\item{gen_idx}{integer; index (1-based) of the ML-generated column in \code{Xhat} \strong{before} intercept}
+\item{gen_idx}{integer; index (1-based) of the binary ML-generated variable. If not specified, defaults to the first non-intercept variable}
 
 \item{data}{data frame (if \code{Y} is a formula)}
 
@@ -83,18 +83,52 @@ one_step(
 \value{
 An object of class \code{mlbc_fit} and \code{mlbc_onestep} with:
 \itemize{
-\item \code{coef}: named coefficient vector
-\item \code{cov} : covariance matrix
+\item \code{coef}: estimated regression coefficients
+\item \code{vcov}: variance-covariance matrix
 }
 }
 \description{
-Fits the one-step estimator by maximizing the unlabeled likelihood via TMB,
-automatically differentiating the objective, gradient, and Hessian.
+Maximum likelihood estimation of the regression model, treating the generated
+covariate as a noisy proxy for the true latent variable. This method is
+particularly useful when an estimate of the false positive rate is not available.
+The variance of the estimates is approximated via the inverse Hessian at the optimum.
 }
-\details{
-Can be called either as
+\section{Usage Options}{
+
+
+\strong{Option 1: Formula Interface}
 \itemize{
-\item \code{one_step(Y, Xhat, ...)} where \code{Y} is numeric and \code{Xhat} a matrix, or
-\item \code{one_step(formula, data, ...)} using a one-sided formula like \code{y ~ x1 + x2}.
+\item \code{Y}: A one-sided formula string
+\item \code{data}: Data frame containing the variables referenced in the formula
 }
+
+\strong{Option 2: Array Interface}
+\itemize{
+\item \code{Y}: Response variable vector
+\item \code{Xhat}: Design matrix of covariates
+}
+}
+
+\examples{
+# Load the remote work dataset
+data(SD_data)
+
+# Basic one-step estimation
+fit_onestep <- one_step(log(salary) ~ wfh_wham + soc_2021_2 + employment_type_name,
+                        data = SD_data)
+summary(fit_onestep)
+
+# With different error distribution
+fit_t <- one_step(log(salary) ~ wfh_wham + soc_2021_2,
+                  data = SD_data,
+                  distribution = "t",
+                  nu = 4)
+summary(fit_t)
+
+# Homoskedastic errors
+fit_homo <- one_step(log(salary) ~ wfh_wham + soc_2021_2,
+                     data = SD_data,
+                     homoskedastic = TRUE)
+summary(fit_homo)
+
 }
