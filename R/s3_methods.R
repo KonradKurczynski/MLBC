@@ -37,6 +37,8 @@ summary.mlbc_fit <- function(object, level = 0.95, ...) {
     orig_names <- paste0("X", seq_len(p))
   }
 
+
+
   if ("(Intercept)" %in% orig_names) {
     intercept_idx <- which(orig_names == "(Intercept)")
   } else if ("Intercept" %in% orig_names) {
