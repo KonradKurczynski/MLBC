@@ -2,9 +2,27 @@
 % Please edit documentation in R/estimation.R
 \name{one_step}
 \alias{one_step}
-\title{One-step estimator for unlabeled data (multi‐dist)}
+\alias{one_step.default}
+\alias{one_step.formula}
+\title{One-step maximum likelihood estimation}
 \usage{
 one_step(
+  Y,
+  Xhat = NULL,
+  homoskedastic = FALSE,
+  distribution = c("normal", "t", "laplace", "gamma", "beta"),
+  nu = 4,
+  gshape = 2,
+  gscale = 1,
+  ba = 2,
+  bb = 2,
+  intercept = TRUE,
+  gen_idx = 1,
+  data = parent.frame(),
+  ...
+)
+
+\method{one_step}{default}(
   Y,
   Xhat,
   homoskedastic = FALSE,
@@ -14,65 +32,103 @@ one_step(
   gscale = 1,
   ba = 2,
   bb = 2,
-  intercept = TRUE
+  intercept = TRUE,
+  gen_idx = 1,
+  ...
+)
+
+\method{one_step}{formula}(
+  Y,
+  Xhat = NULL,
+  homoskedastic = FALSE,
+  distribution = c("normal", "t", "laplace", "gamma", "beta"),
+  nu = 4,
+  gshape = 2,
+  gscale = 1,
+  ba = 2,
+  bb = 2,
+  intercept = TRUE,
+  gen_idx = 1,
+  data = parent.frame(),
+  ...
 )
 }
 \arguments{
-\item{Y}{Numeric response vector.}
+\item{Y}{numeric response vector, or a one-sided formula}
 
-\item{Xhat}{Numeric matrix of regressors \emph{excluding} the intercept. The
-\strong{first} column must be the ML-generated regressor to correct.}
+\item{Xhat}{numeric matrix of regressors (if \code{Y} is numeric)}
 
-\item{homoskedastic}{Logical; if \code{TRUE}, assume a single error variance.}
+\item{homoskedastic}{logical; if \code{TRUE}, assumes a common error variance; otherwise, the error variance is allowed to vary with the true latent binary variable}
 
-\item{distribution}{Character: one of \code{"normal"}, \code{"t"}, \code{"laplace"}, \code{"gamma"}, or \code{"beta"}. Specifies which conditional density to use for residuals in the likelihood estimation.}
+\item{distribution}{character; distribution for error terms. One of \code{"normal"}, \code{"t"}, \code{"laplace"}, \code{"gamma"}, \code{"beta"}}
 
-\item{nu}{Numeric; degrees of freedom (only used if \code{distribution = "t"}).}
+\item{nu}{numeric; degrees of freedom (for Student-t distribution)}
 
-\item{gshape, gscale}{Numeric; shape & scale for Gamma (only if \code{distribution = "gamma"}).}
+\item{gshape}{numeric; shape parameter (for Gamma distribution)}
 
-\item{ba, bb}{Numeric; alpha & beta for Beta (only if \code{distribution = "beta"}).}
+\item{gscale}{numeric; scale parameter (for Gamma distribution)}
 
-\item{intercept}{Logical; if \code{TRUE}, an intercept column of 1’s is prepended.}
+\item{ba}{numeric; alpha parameter (for Beta distribution)}
+
+\item{bb}{numeric; beta parameter (for Beta distribution)}
+
+\item{intercept}{logical; if \code{TRUE}, prepend an intercept column to \code{Xhat}}
+
+\item{gen_idx}{integer; index (1-based) of the binary ML-generated variable. If not specified, defaults to the first non-intercept variable}
+
+\item{data}{data frame (if \code{Y} is a formula)}
+
+\item{...}{unused}
 }
 \value{
-An object of class \code{mlbc_fit} and subclass \code{mlbc_onestep} with:
+An object of class \code{mlbc_fit} and \code{mlbc_onestep} with:
 \itemize{
-\item \code{coef}: Named numeric vector of estimated coefficients.
-\item \code{cov} : Variance–covariance matrix.
+\item \code{coef}: estimated regression coefficients
+\item \code{vcov}: variance-covariance matrix
 }
 }
 \description{
-Fits the one-step estimator by maximizing the unlabeled likelihood via TMB,
-automatically differentiating the objective, gradient, and Hessian.
+Maximum likelihood estimation of the regression model, treating the generated
+covariate as a noisy proxy for the true latent variable. This method is
+particularly useful when an estimate of the false positive rate is not available.
+The variance of the estimates is approximated via the inverse Hessian at the optimum.
 }
+\section{Usage Options}{
+
+
+\strong{Option 1: Formula Interface}
+\itemize{
+\item \code{Y}: A one-sided formula string
+\item \code{data}: Data frame containing the variables referenced in the formula
+}
+
+\strong{Option 2: Array Interface}
+\itemize{
+\item \code{Y}: Response variable vector
+\item \code{Xhat}: Design matrix of covariates
+}
+}
+
 \examples{
-set.seed(2025)
+# Load the remote work dataset
+data(SD_data)
 
-# 1) Simulate “unlabeled” data
-n     <- 200
-p     <- 0.3
-Xtrue <- rbinom(n, 1, p)
-# ML regressor with 10\% false positives
-Xhat  <- ifelse(runif(n) < 0.10, 1 - Xtrue, Xtrue)
-Y     <- 1 + 2 * Xtrue + rnorm(n)
+# Basic one-step estimation
+fit_onestep <- one_step(log(salary) ~ wfh_wham + soc_2021_2 + employment_type_name,
+                        data = SD_data)
+summary(fit_onestep)
 
-# 2) Small validation set to estimate fpr
-m        <- 50
-Xval_t   <- rbinom(m, 1, p)
-Xval_h   <- ifelse(runif(m) < 0.10, 1 - Xval_t, Xval_t)
-fpr_hat  <- mean(Xval_h == 1 & Xval_t == 0)
+# With different error distribution
+fit_t <- one_step(log(salary) ~ wfh_wham + soc_2021_2,
+                  data = SD_data,
+                  distribution = "t",
+                  nu = 4)
+summary(fit_t)
 
-# 3) One‐step TMB estimator (Normal), with intercept
-fit <- one_step(
-  Y            = Y,
-  Xhat         = matrix(Xhat, ncol = 1, dimnames = list(NULL, "Xhat")),
-  homoskedastic = FALSE,
-  distribution  = "normal",
-  intercept     = TRUE
-)
-print(fit)
-}
-\references{
-Battaglia, Christensen, Hansen, and Sacher (2025). "Inference for Regression with Variables Generated by AI or Machine Learning".
+# Homoskedastic errors
+fit_homo <- one_step(log(salary) ~ wfh_wham + soc_2021_2,
+                     data = SD_data,
+                     homoskedastic = TRUE)
+summary(fit_homo)
+
 }

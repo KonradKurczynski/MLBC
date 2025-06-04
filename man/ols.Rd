@@ -2,22 +2,71 @@
 % Please edit documentation in R/OLS.R
 \name{ols}
 \alias{ols}
-\title{Ordinary least squares (and heteroskedastic‐robust SEs)}
+\alias{ols.default}
+\alias{ols.formula}
+\title{Ordinary Least Squares (OLS) regression}
 \usage{
-ols(Y, X, se = TRUE, intercept = FALSE)
+ols(Y, X = NULL, data = parent.frame(), se = TRUE, intercept = FALSE, ...)
+
+\method{ols}{default}(Y, X, data = parent.frame(), se = TRUE, intercept = FALSE, ...)
+
+\method{ols}{formula}(Y, X = NULL, data = parent.frame(), se = TRUE, intercept = TRUE, ...)
 }
 \arguments{
-\item{Y}{numeric response}
+\item{Y}{numeric response vector, or a one-sided formula}
 
-\item{X}{numeric design matrix}
+\item{X}{numeric design matrix (if \code{Y} is numeric)}
 
-\item{se}{logical; return SEs?}
+\item{data}{data frame (if \code{Y} is a formula)}
 
-\item{intercept}{logical; include an intercept term in estimation?}
+\item{se}{logical; return heteroskedastic-robust standard errors?}
+
+\item{intercept}{logical; include an intercept term?}
+
+\item{...}{unused}
 }
 \value{
-list(coef, vcov, sXX) or list(coef, sXX)
+An object of class \code{mlbc_fit} and \code{mlbc_ols} with:
+\itemize{
+\item \code{coef}: coefficient estimates
+\item \code{vcov}: variance-covariance matrix
+\item \code{sXX}: scaled cross-product X'X / n
+}
 }
 \description{
-Ordinary least squares (and heteroskedastic‐robust SEs)
+Ordinary Least Squares regression with support for both formula and array-based
+interfaces. This function provides a unified interface for fitting linear models
+using either R formulas with data frames or raw matrices.
+}
+\section{Usage Options}{
+
+
+\strong{Option 1: Formula Interface}
+\itemize{
+\item \code{Y}: A one-sided formula (e.g., \code{y ~ x1 + x2})
+\item \code{data}: A data frame containing the variables referenced in the formula
+}
+
+\strong{Option 2: Array Interface}
+\itemize{
+\item \code{Y}: Response variable vector
+\item \code{X}: Design matrix of covariates
+}
+}
+
+\examples{
+# Load the remote work dataset
+data(SD_data)
+
+# Formula interface
+fit1 <- ols(log(salary) ~ wfh_wham + soc_2021_2 + employment_type_name,
+            data = SD_data)
+summary(fit1)
+
+# Array interface
+Y <- log(SD_data$salary)
+X <- model.matrix(~ wfh_wham + soc_2021_2, data = SD_data)
+fit2 <- ols(Y, X[, -1], intercept = TRUE)  # exclude intercept column
+summary(fit2)
+
 }
