@@ -1,10 +1,30 @@
+This simulation example demonstrates the use of the `MLBC` package for
+correcting bias and performing valid inference in regression models with
+generated binary labels.
+
+The example is based on the simulation design in [Battaglia,
+Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585).
+Data are generated according to the model
+`Y = b0 + b1 * X + (a1 X + a0 (1 - X)) * u`, where `u` is a standard
+normal random variable. Parameter values are set to match the empirical
+example in the paper.
+
+In the main sample, the true variable `X` is latent. A predicted label
+`Xhat` is generated with a false positive rate `fpr`.
+
+We also generate a smaller validation sample in which both `X` and
+`Xhat` are observed. This sample is used to estimate `fpr`.
+
+We generate `nsim` data sets, each with `n` observations in the main
+sample and `m` observations from which to estimate `fpr`.
+
+Load the package:
+
 ``` r
 library(MLBC)
 ```
 
-# Example 1
-
-## Parameters
+Set parameter values and pre-allocate storage for simulation results:
 
 ``` r
 nsim  <- 1000
@@ -16,15 +36,12 @@ fpr   <- kappa / sqrt(n)
 
 b0    <- 10
 b1    <- 1
-a0    <- 0.3   
-a1    <- 0.5   
-
-alpha <- c(0.0, 0.5, 0.5)
-beta  <- c(0.0, 2.0, 4.0)
+a0    <- 0.3
+a1    <- 0.5
 
 #pre-allocated storage
-B <- array(0, dim = c(nsim, 9, 2))
-S <- array(0, dim = c(nsim, 9, 2))
+B <- array(0, dim = c(nsim, 4, 2))
+S <- array(0, dim = c(nsim, 4, 2))
 
 update_results <- function(b, V, i, method_idx) {
   for (j in 1:2) {
@@ -34,7 +51,7 @@ update_results <- function(b, V, i, method_idx) {
 }
 ```
 
-## Data Generation Process
+Function to generate data:
 
 ``` r
 generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
@@ -53,56 +70,49 @@ generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
   }
   
   eps <- rnorm(N)  # N(0,1)
-  # heteroskedastic noise: σ₁ when X=1, σ₀ when X=0
+  # heteroskedastic noise: a1 when X=1, a0 when X=0
   Y <- b0 + b1*X + (a1*X + a0*(1 - X)) * eps
   
-  train_Y   <- Y[       1:n    ]
-  train_X   <- cbind(Xhat[    1:n],    rep(1, n))
-  test_Y    <- Y[(n+1):N      ]
+  train_Y   <- Y[1:n]
+  train_X   <- cbind(Xhat[1:n],        rep(1, n))
   test_Xhat <- cbind(Xhat[(n+1):N],    rep(1, m))
   test_X    <- cbind(X[(n+1):N],       rep(1, m))
   
   list(
     train_Y   = train_Y,
     train_X   = train_X,
-    test_Y    = test_Y,
     test_Xhat = test_Xhat,
     test_X    = test_X
   )
 }
 ```
 
-## Estimation and bias correction
+Generate data, implement methods, and store results:
 
 ``` r
 for (i in seq_len(nsim)) {
-  dat   <- generate_data(n, m, p, fpr, b0, b1, a0, a1)
-  tY    <- dat$train_Y;    tX <- dat$train_X
-  eY    <- dat$test_Y;     eXhat <- dat$test_Xhat;  eX <- dat$test_X
+  dat       <- generate_data(n, m, p, fpr, b0, b1, a0, a1)
+  train_Y   <- dat$train_Y    # response variable in main sample
+  train_X   <- dat$train_X    # generated labels in main sample
+  test_Xhat <- dat$test_Xhat  # generated labels in validation sample
+  test_X    <- dat$test_X     # true labels in validation sample
   
-  # 1) OLS on unlabeled (X̂)
-  ols_res <- ols(tY, tX)
-  update_results(ols_res$coef,  ols_res$vcov, i, 1)
+  # Method 1: run OLS on generated labels in the main sample (biased)
+  ols_res <- ols(train_Y, train_X)
+  update_results(ols_res$coef, ols_res$vcov, i, 1)
   
-  # 2) OLS on labeled (true X)
-  ols_res <- ols(eY, eX)
-  update_results(ols_res$coef,  ols_res$vcov, i, 2)
+  # Method 2: Additive bias correction
+  fpr_hat <- mean(test_Xhat[,1] * (1 - test_X[,1]))
+  bca_res <- ols_bca(train_Y, train_X, fpr_hat, m, intercept=FALSE)
+  update_results(bca_res$coef, bca_res$vcov, i, 2)
+
+  # Method 3: Multiplicative bias correction
+  bcm_res <- ols_bcm(train_Y, train_X, fpr_hat, m, intercept=FALSE)
+  update_results(bcm_res$coef, bcm_res$vcov, i, 3)
   
-  # 3–8) Additive & multiplicative bias‑corrections
-  fpr_hat <- mean(eXhat[,1] * (1 - eX[,1]))
-  for (j in 1:3) {
-    fpr_bayes <- (fpr_hat * m + alpha[j]) / (m + alpha[j] + beta[j])
-    
-    bca_res <- ols_bca(tY, tX, fpr_bayes, m, intercept=FALSE)
-    update_results(bca_res$coef, bca_res$vcov, i, 2 + j)
-    
-    bcm_res <- ols_bcm(tY, tX, fpr_bayes, m, intercept=FALSE)
-    update_results(bcm_res$coef, bcm_res$vcov, i, 5 + j)
-  }
-  
-  # 9) One‑step estimator
-  one_res <- one_step(tY, tX, intercept=FALSE)
-  update_results(one_res$coef, one_res$cov, i, 9)
+  # Method 4: One-step estimator
+  one_res <- one_step(train_Y, train_X, intercept=FALSE)
+  update_results(one_res$coef, one_res$cov, i, 4)
   
   if (i %% 100 == 0) {
     message("Completed ", i, " of ", nsim, " sims")
@@ -130,6 +140,9 @@ for (i in seq_len(nsim)) {
 
     ## Completed 1000 of 1000 sims
 
+Compute coverage probabilities of 95% confidence intervals for the slope
+coefficient across methods:
+
 ``` r
 coverage <- function(bgrid, b, se) {
   n_grid <- length(bgrid)
@@ -141,18 +154,13 @@ coverage <- function(bgrid, b, se) {
   cvg
 }
 
-true_beta1 <- 1.0
+true_beta1 <- b1
 
 methods <- c(
-  "OLS θ̂"  = 1,
-  "OLS θ"  = 2,
-  "BCA-0"  = 3,
-  "BCA-1"  = 4,
-  "BCA-2"  = 5,
-  "BCM-0"  = 6,
-  "BCM-1"  = 7,
-  "BCM-2"  = 8,
-  "OSU"    = 9
+  "OLS     " = 1,
+  "ols_bca " = 2,
+  "ols_bcm " = 3,
+  "one_step" = 4
 )
 
 cov_dict <- sapply(methods, function(col) {
@@ -165,8 +173,21 @@ cov_series <- setNames(cov_dict, names(methods))
 print(cov_series)
 ```
 
-    ## OLS θ̂ OLS θ BCA-0 BCA-1 BCA-2 BCM-0 BCM-1 BCM-2   OSU 
-    ## 0.000 0.951 0.856 0.894 0.893 0.893 0.907 0.907 0.943
+    ## OLS      ols_bca  ols_bcm  one_step 
+    ##    0.000    0.835    0.879    0.950
+
+Evidently, standard OLS confidence intervals for the slope coefficient
+have coverage of zero. Both `ols_bca` and `ols_bcm` yield confidence
+intervals with coverage probabilities a bit below the nominal level of
+95%, but their coverage approaches 95% in larger sample sizes. Moreover,
+`one_step` produces confidence intervals with coverage close to 95%.
+
+Finally, we tabulate results, presenting:
+
+-   the average estimate and average standard error across simulations
+    for each method
+-   intervals containing the 2.5% and 97.5% quantiles of the estimates
+    across simultaions for each method
 
 ``` r
 method_names <- names(methods)
@@ -176,49 +197,46 @@ coef_names <- c("Beta1","Beta0")
 nmethods <- dim(B)[2]
 df <- data.frame(Method = method_names, stringsAsFactors = FALSE)
 
-df$Est_Beta1   <- NA_real_
-df$SE_Beta1    <- NA_real_
-df$CI95_Beta1  <- NA_character_
-df$Est_Beta0   <- NA_real_
-df$SE_Beta0    <- NA_real_
-df$CI95_Beta0  <- NA_character_
+df$Avg_Beta1        <- NA_real_
+df$Avg_SE_Beta1     <- NA_real_
+df$Quantiles_Beta1  <- NA_character_
+df$Avg_Beta0        <- NA_real_
+df$Avg_SE_Beta0     <- NA_real_
+df$Quantiles_Beta0  <- NA_character_
 
 for(i in seq_len(nmethods)) {
-  est1 <- B[, i, 1]; se1 <- S[, i, 1]
-  est0 <- B[, i, 2]; se0 <- S[, i, 2]
+  est1 <- B[, i, 1]
+  est0 <- B[, i, 2]
+  se1  <- S[, i, 1]
+  se0  <- S[, i, 2]
   
   ci1 <- quantile(est1, probs = c(0.025, 0.975))
   ci0 <- quantile(est0, probs = c(0.025, 0.975))
   
-  df$Est_Beta1[i]  <- mean(est1)
-  df$SE_Beta1[i]   <- mean(se1)
-  df$CI95_Beta1[i] <- sprintf("[%0.3f, %0.3f]", ci1[1], ci1[2])
+  df$Avg_Beta1[i]  <- mean(est1)
+  df$Avg_SE_Beta1[i]   <- mean(se1)
+  df$Quantiles_Beta1[i] <- sprintf("[%0.3f, %0.3f]", ci1[1], ci1[2])
   
-  df$Est_Beta0[i]  <- mean(est0)
-  df$SE_Beta0[i]   <- mean(se0)
-  df$CI95_Beta0[i] <- sprintf("[%0.3f, %0.3f]", ci0[1], ci0[2])
+  df$Avg_Beta0[i]  <- mean(est0)
+  df$Avg_SE_Beta0[i]   <- mean(se0)
+  df$Quantiles_Beta0[i] <- sprintf("[%0.3f, %0.3f]", ci0[1], ci0[2])
 }
 
 print(df)
 ```
 
-    ##   Method Est_Beta1   SE_Beta1     CI95_Beta1 Est_Beta0    SE_Beta0
-    ## 1  OLS θ̂ 0.8352507 0.02126421 [0.795, 0.878] 10.008312 0.002559806
-    ## 2  OLS θ 1.0000450 0.07104848 [0.857, 1.134] 10.000391 0.009728859
-    ## 3  BCA-0 0.9746867 0.05200785 [0.880, 1.091] 10.001338 0.003532601
-    ## 4  BCA-1 0.9831103 0.05337081 [0.889, 1.100] 10.000917 0.003583907
-    ## 5  BCA-2 0.9828159 0.05332620 [0.888, 1.100] 10.000931 0.003582178
-    ## 6  BCM-0 1.0079807 0.06479507 [0.886, 1.191]  9.999674 0.003972330
-    ## 7  BCM-1 1.0204472 0.06728299 [0.897, 1.208]  9.999051 0.004070438
-    ## 8  BCM-2 1.0199827 0.06719433 [0.897, 1.207]  9.999074 0.004066818
-    ## 9    OSU 0.9988741 0.03090805 [0.936, 1.057]  9.999987 0.002499982
-    ##         CI95_Beta0
+    ##     Method Avg_Beta1 Avg_SE_Beta1 Quantiles_Beta1 Avg_Beta0 Avg_SE_Beta0
+    ## 1 OLS      0.8335635   0.02128098  [0.790, 0.872]  10.00840  0.002559407
+    ## 2 ols_bca  0.9695534   0.05143863  [0.871, 1.086]  10.00160  0.003509529
+    ## 3 ols_bcm  1.0011194   0.06376873  [0.881, 1.181]  10.00002  0.003929130
+    ## 4 one_step 0.9989799   0.03106329  [0.934, 1.056]  10.00010  0.002499879
+    ##    Quantiles_Beta0
     ## 1 [10.003, 10.013]
-    ## 2  [9.981, 10.020]
-    ## 3  [9.994, 10.008]
-    ## 4  [9.994, 10.007]
-    ## 5  [9.994, 10.007]
-    ## 6  [9.990, 10.008]
-    ## 7  [9.989, 10.007]
-    ## 8  [9.989, 10.007]
-    ## 9  [9.995, 10.005]
+    ## 2  [9.994, 10.008]
+    ## 3  [9.990, 10.007]
+    ## 4  [9.995, 10.005]
+
+We see that OLS estimator of the slope coefficient is biased (it
+under-estimates the true effect size by about 17% on average), while
+`ols_bca`, `ols_bcm`, and `one_step` yield estimates close to the true
+value of the slope coefficient.
