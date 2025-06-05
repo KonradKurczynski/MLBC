@@ -1,4 +1,5 @@
-# About this notebook
+# Remote Work and Wage Inequality: Correcting Bias in Regression with Generated Binary Labels
+## About this notebook
 
 This notebook estimates the association between working from home and
 salaries using real-world job postings data [(Hansen et al.,
