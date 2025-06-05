@@ -23,15 +23,20 @@ library(MLBC)
 
 # About this notebook
 
-This notebook estimates models for the association between CEO time allocation and firm performance, reproducing results from Table 2 of [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585). The analysis demonstrates bias correction methods for ML-generated regressors in the context of topic modeling.
+This notebook estimates the association between CEO time alocation and firm performance [(Bandiera et al. 2020)](https://www.journals.uchicago.edu/doi/10.1086/705331). It illustrates how the functions `ols_bca_topic` and `ols_bcm_topic` can be used to correct bias 
+from estimated topic model shares. The notebook reproduces results from Table 2 of [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585). 
 
-## The Dataset
+[(Bandiera et al. 2020)](https://www.journals.uchicago.edu/doi/10.1086/705331) conduct a time-use survey for a sample of CEOs. Survey responses are recorded for each 15-minute interval of a given week. The sample consists of 654 answer combinations. To reduce dimensionality, the authors fit a topic model with two topics. One topic
+places relatively higher mass on features associated with "management," like visiting production sites or meeting with suppliers, while the other places relatively higher mass on features associated with "leadership" like communicating
+with other C-suite executives and holding large, multi-function meetings.
 
-The role of CEOs in shaping firm performance is important for many academic and policy debates, but until recently little data existed on what CEOs do with their time. To fill this void, Bandiera et al. (2020) collects diary data on a set of CEO activities from a sample of manufacturing firms. The paper describes salient differences in executive time use and relates these differences to firm and CEO characteristics and firm outcomes.
+Each CEO's leadership weight is a measure of their tendency to engage in leadership activities. One of the key results in [(Bandiera et al. 2020)](https://www.journals.uchicago.edu/doi/10.1086/705331) is a regression of log sales, a measure of firm size,
+on the estimated leadership weight (along with other firm controls).
 
-The survey consists of five questions with categorical responses: (Q1) the type of activity (meeting, public event, etc.); (Q2) duration of activity (15m, 30m, etc.); (Q3) whether the activity is planned or unplanned; (Q4) the number of participants in the activity; (Q5) the function of the participants in the activity (HR, finance, suppliers, etc.). Survey responses are recorded for each 15-minute interval of a given week, e.g. Monday 8am-8:15am, Monday 8:15am-8:30am, and so forth. The sample consists of V = 654 answer combinations observed across the five questions.
 
-The data are modeled as a topic model, with **K = 2 topics**. The estimated **β̂₁** places relatively higher mass on features associated with "management," like communicating with other C-suite executives and holding large, multi-function meetings, or suppliers, while **β̂₂** places relatively higher mass on features associated with "leadership" - like communicating with other C-suite executives and holding large, multi-function meetings.
+## Data
+
+The package contains `topic_model_data`, which we will use for the regression as well as joint estimates of the regression and topic model, as described in [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585).
 
 ```{r}
 # Load the topic model data
@@ -62,13 +67,10 @@ sample_data <- data.frame(
 head(sample_data)
 ```
 
-# Estimation Strategy
+Here, `theta_topic1` contains the leadership topic weight for each observation.
 
-The paper's use of the two-step strategy may, however, lead to invalid inference. To explore this possibility, we first replicate the authors' two-step strategy, estimating **θ̂ᵢ** by LDA, then regressing the log value of each CEO's firm on **θ̂ᵢ** and controls including log employment, country fixed effects, and survey-wave fixed effects.
-
-## Two-Step Approach
-
-The two-step approach now estimates a smaller insignificant effect, while both bias correction and joint estimation continue to estimate a significant effect.
+# Results
+We first present results for an OLS regression of log sales on the leadership topic weight and controls:
 
 ```{r}
 # Full sample two-step estimation
@@ -77,14 +79,8 @@ Xhat_full <- cbind(theta_full[, 1], Z)  # First topic + controls
 lm_full <- ols(Y, Xhat_full, se = TRUE, intercept = TRUE)
 summary(lm_full)
 ```
-
-```{r}
-# 10% Subsample two-step estimation  
-theta_samp <- theta_est_samp
-Xhat_samp <- cbind(theta_samp[, 1], Z)
-lm_samp <- ols(Y, Xhat_samp, se = TRUE, intercept = TRUE)
-summary(lm_samp)
-```
+We now compare these estimates with bias-corrected estimates. We will use `ols_bca_topic`. This requires an estimate of $\kappa$, which is $\sqrt{n}E[C_{i}^{-1}]$, where $C_i$
+is the number of feature counts in unstructured document $i$. This is stored in the first column of `lda_data`.
 
 ## Bias Correction
 
@@ -93,6 +89,13 @@ The empirical analogue of this expression is **θ̂ᵢ** for the simple model. W
 ```{r}
 # Full sample bias correction
 kappa_full <- mean(1.0 / lda_data[, 1]) * sqrt(nrow(lda_data))
+print(c("Kappa: ", kappa_full))
+```
+
+In addition to $\kappa$, we need to construct a matrix `S` which picks off the relevant column of `theta_full` (a `n` by `K` matrix, `K` being the number of topics, here `K = 2`) to include in the regression.
+
+We also include the estmated topic-word distributions (a `V` by `K` matrix, ` V` being the number of features in the otpic model). 
+```{r}
 S <- matrix(c(1.0, 0.0), nrow = 1)  # Topic loadings: first topic active
 
 bc_full <- ols_bca_topic(Y = Y,
@@ -103,6 +106,25 @@ bc_full <- ols_bca_topic(Y = Y,
                          k = kappa_full)           # Scaling parameter
 summary(bc_full)
 ```
+The two methods (`ols` and `ols_bca_topic`) produce similar estimates and confidence intervals. This suggests that measurement error in the estimated topic_1 shares
+is small enough that it doesn't materially distort inference.
+
+To explore this further, we repeat the above taking a 10% subsample of the data used to estimate the topic model. This ensures that the estimated topic weights are noisier
+signals of the true leadership index. Here we are running the same regression as before, just with a noisier vvalue of the topic_1 weight.
+
+The data are names as before, with a `_samp` suffix. 
+
+```{r}
+# 10% Subsample two-step estimation  
+theta_samp <- theta_est_samp
+Xhat_samp <- cbind(theta_samp[, 1], Z)
+lm_samp <- ols(Y, Xhat_samp, se = TRUE, intercept = TRUE)
+summary(lm_samp)
+```
+Evidently, increasing the measurement error in the estimated topic weights reduces the estimated slope coefficient by around 50%. Moreover, OLS confidence
+intervals for the slope coefficient now include zero. 
+
+We now compare with bias correction: 
 
 ```{r}
 # 10% Subsample bias correction
@@ -117,13 +139,11 @@ bc_samp <- ols_bca_topic(Y = Y,
 summary(bc_samp)
 ```
 
-## Joint Estimation
+Performing the bias correction results in a much larger estimated effect size. 
 
-In other words, there are a relatively large number of survey responses per CEO compared to the number of surveyed CEOs, meaning the measurement error in **θ̂ᵢ** is small relative to sampling error. To increase measurement error, we take a random 10% subsample of survey responses for each CEO, which can be thought of as observing half a day of behavior rather than a five-day workweek.
+Finally, we tabulate the results from the joint estimation performed by [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585):
 
 ```{r}
-set.seed(123456)
-
 # Joint estimation using MCMC draws (scaled by dependent variable standard deviation)
 gamma_scaled <- gamma_draws * sigma_y
 gamma_hat_1 <- colMeans(gamma_scaled)
@@ -133,17 +153,17 @@ alpha <- 0.05
 ci_lower_1 <- apply(gamma_scaled, 2, quantile, probs = alpha/2)
 ci_upper_1 <- apply(gamma_scaled, 2, quantile, probs = 1 - alpha/2)
 
-cat("Joint estimation results:\n")
-cat("Topic 1 coefficient:", round(gamma_hat_1[1], 3), 
+cat("Joint estimates and confidence intervals:\n")
+cat("Full Sample:", round(gamma_hat_1[1], 3), 
     " [", round(ci_lower_1[1], 3), ",", round(ci_upper_1[1], 3), "]\n")
-cat("Topic 2 coefficient:", round(gamma_hat_1[2], 3),
+cat("10% Subsample:", round(gamma_hat_1[2], 3),
     " [", round(ci_lower_1[2], 3), ",", round(ci_upper_1[2], 3), "]\n")
 ```
 
-## Comparison of Methods
+We see that unlike OLS estimation, joint estimation is robust to increasing the noise in the estimated topic weight. Both samples produce a similar estimated effect size onfidence intervals that 
+exclude zero. 
 
-What's more, neither bias correction nor joint estimation shifts the estimated coefficient upward by a large amount. This shows that bias is not an inevitable part of using AI/ML-generated variables, but rather depends on the empirical setting.
-
+Finally, we tabulate all results together: 
 ```{r}
 # Extract key coefficients for the first topic (management)
 results <- data.frame(

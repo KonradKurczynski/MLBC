@@ -1,31 +1,32 @@
----
-title: "Simulation Example: Bias Correction in Regression with Generated Binary Labels"
-author: "Konrad Kurczynski"
-date: "`r Sys.Date()`"
-output: 
-  md_document:
-    variant: gfm
----
+This simulation example demonstrates the use of the `MLBC` package for
+correcting bias and performing valid inference in regression models with
+generated binary labels.
 
-This simulation example demonstrates the use of the `MLBC` package for correcting bias and performing valid inference in regression models with generated binary labels. 
+The example is based on the simulation design in [Battaglia,
+Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585).
+Data are generated according to the model
+`Y = b0 + b1 * X + (a1 X + a0 (1 - X)) * u`, where `u` is a standard
+normal random variable. Parameter values are set to match the empirical
+example in the paper.
 
-The example is based on the simulation design in [Battaglia, Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585). Data are generated according to the model `Y = b0 + b1 * X + (a1 X + a0 (1 - X)) * u`, where `u` is a standard normal random variable. Parameter values are set to match the empirical example in the paper.
+In the main sample, the true variable `X` is latent. A predicted label
+`Xhat` is generated with a false positive rate `fpr`.
 
-In the main sample, the true variable `X` is latent. A predicted label `Xhat` is generated with a false positive rate `fpr`. 
+We also generate a smaller validation sample in which both `X` and
+`Xhat` are observed. This sample is used to estimate `fpr`.
 
-We also generate a smaller validation sample in which both `X` and `Xhat` are observed. This sample is used to estimate `fpr`.
-
-We generate `nsim` data sets, each with `n` observations in the main sample and `m` observations from which to estimate `fpr`. 
+We generate `nsim` data sets, each with `n` observations in the main
+sample and `m` observations from which to estimate `fpr`.
 
 Load the package:
 
-```{r}
+``` r
 library(MLBC)
 ```
 
 Set parameter values and pre-allocate storage for simulation results:
 
-```{r}
+``` r
 nsim  <- 1000
 n     <- 16000
 m     <- 1000
@@ -54,7 +55,7 @@ update_results <- function(fit_obj, i, method_idx) {
 
 Function to generate data:
 
-```{r}
+``` r
 generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
   N    <- n + m
   X    <- numeric(N)
@@ -96,7 +97,7 @@ generate_data <- function(n, m, p, fpr, b0, b1, a0, a1) {
 
 Generate data, implement methods, and store results:
 
-```{r}
+``` r
 for (i in seq_len(nsim)) {
   dat <- generate_data(n, m, p, fpr, b0, b1, a0, a1)
   
@@ -125,9 +126,31 @@ for (i in seq_len(nsim)) {
   }
 }
 ```
-Compute coverage probabilities of 95% confidence intervals for the slope coefficient across methods:
 
-```{r}
+    ## Completed 100 of 1000 simulations
+
+    ## Completed 200 of 1000 simulations
+
+    ## Completed 300 of 1000 simulations
+
+    ## Completed 400 of 1000 simulations
+
+    ## Completed 500 of 1000 simulations
+
+    ## Completed 600 of 1000 simulations
+
+    ## Completed 700 of 1000 simulations
+
+    ## Completed 800 of 1000 simulations
+
+    ## Completed 900 of 1000 simulations
+
+    ## Completed 1000 of 1000 simulations
+
+Compute coverage probabilities of 95% confidence intervals for the slope
+coefficient across methods:
+
+``` r
 true_beta1 <- b1
 
 methods <- c(
@@ -147,14 +170,23 @@ names(coverage_probs) <- names(methods)
 print(coverage_probs)
 ```
 
-Evidently, standard OLS confidence intervals for the slope coefficient have coverage of zero. Both `ols_bca` and `ols_bcm` yield confidence intervals with coverage probabilities a bit below the nominal level of 95%, but their coverage approaches 95% in larger sample sizes. Moreover, `one_step` produces confidence intervals with coverage close to 95%.
+    ## OLS       ols_bca   ols_bcm   one_step  
+    ##     0.000     0.850     0.894     0.945
+
+Evidently, standard OLS confidence intervals for the slope coefficient
+have coverage of zero. Both `ols_bca` and `ols_bcm` yield confidence
+intervals with coverage probabilities a bit below the nominal level of
+95%, but their coverage approaches 95% in larger sample sizes. Moreover,
+`one_step` produces confidence intervals with coverage close to 95%.
 
 Finally, we tabulate results, presenting:
 
-* the average estimate and average standard error across simulations for each method;
-* intervals containing the 2.5% and 97.5% quantiles of the estimates across simultaions for each method.
+- the average estimate and average standard error across simulations for
+  each method;
+- intervals containing the 2.5% and 97.5% quantiles of the estimates
+  across simultaions for each method.
 
-```{r}
+``` r
 method_names <- names(methods)
 nmethods <- length(methods)
 
@@ -195,4 +227,18 @@ for (i in seq_len(nmethods)) {
 print(results_df)
 ```
 
-We see that OLS estimator of the slope coefficient is biased (it under-estimates the true effect size by about 17% on average), while `ols_bca`, `ols_bcm`, and `one_step` yield estimates close to the true value of the slope coefficient. 
+    ##      Method Avg_Beta1 Avg_SE_Beta1 Quantiles_Beta1 Avg_Beta0 Avg_SE_Beta0
+    ## 1 OLS       0.8337209   0.02126083  [0.792, 0.875] 10.008334  0.002560337
+    ## 2 ols_bca   0.9703655   0.05153794  [0.874, 1.085] 10.001505  0.003514317
+    ## 3 ols_bcm   1.0021273   0.06393480  [0.877, 1.176]  9.999921  0.003936437
+    ## 4 one_step  0.9978378   0.03104741  [0.930, 1.058] 10.000038  0.002500850
+    ##    Quantiles_Beta0
+    ## 1 [10.003, 10.013]
+    ## 2  [9.994, 10.009]
+    ## 3  [9.991, 10.008]
+    ## 4  [9.995, 10.005]
+
+We see that OLS estimator of the slope coefficient is biased (it
+under-estimates the true effect size by about 17% on average), while
+`ols_bca`, `ols_bcm`, and `one_step` yield estimates close to the true
+value of the slope coefficient.

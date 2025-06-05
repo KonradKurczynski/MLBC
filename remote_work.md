@@ -1,17 +1,25 @@
+# About this notebook
+
+This notebook estimates the association between working from home and
+salaries using real-world job postings data [(Hansen et al.,
+2023)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4380734). It
+illustrates how the functions `ols_bca`, `ols_bcm`, and `one_step` can
+be used to correct bias from regressing on AI/ML-generated labels. The
+notebook reproduces results from Table 1 of [Battaglia, Christensen,
+Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585).
+
 ``` r
 library(MLBC)
 ```
 
-# About this notebook
-
-This notebook estimates models for the association between salaries and
-remote work being offered for a sample of job postings, reproducing the
-results reported in Table 1 of [Battaglia, Christensen, Hansen & Sacher
-(2024)](https://arxiv.org/abs/2402.15585).
-
 ## The Dataset
 
-The data set classifies job postings available from Lightcast
+The package contains a subset of [a larger dataset](https://wfhmap.com)
+regarding work from home. The sample consists of 16,315 job postings for
+2022 and 2023 with “San Diego, CA” recorded as the city and “72”
+recorded as the NAICS2 industry code of the advertising firm.
+
+The dataset contains the following entries:
 
 1.  `city_name`: city of the job posting
 
@@ -21,12 +29,15 @@ The data set classifies job postings available from Lightcast
 
 4.  `salary`: salary offered
 
-5.  `wfh_wham`: **binary label generated via ML, indicating whether
-    remote work is offered**
+5.  `wfh_wham`: **ML-generated indicator of whether the job ofers work
+    from home using fine-tuned DistilBERT as in [(Hansen et al.,
+    2023)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4380734)**
 
-6.  `soc_2021_2`: occupation code
+6.  `soc_2021_2`: Bureau of Labor Statistics Standard Occupational
+    Classification code
 
-7.  `employment_type_name`: part time/full time indication
+7.  `employment_type_name`: indicates whether the position is full-tuime
+    or part-time
 
 ``` r
 SD_data <- MLBC::SD_data
@@ -49,19 +60,43 @@ head(SD_data)
     ## 5        0    11-0000 Full-time (> 32 hours)
     ## 6        0    35-0000 Full-time (> 32 hours)
 
-# ML-classification error
+# Estimating the false-positive rate
 
-We’re trying to estimate the association between the salary offered and
-whether the job offers remote work, using a binary label `wfh_wham`
-imputed through machine learning. We know that the false positive rate
-of the flag is about `0.009`, which was calculated using a sample of
-`1000` postings.
+The variable `wfh_wham` describing whether the job posting offers remote
+work is not manually collected, but it is imputed via ML methods using
+fine-tuned DistilBERT as in [(Hansen et al.,
+2023)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4380734).
+This classifier has over 99% test accuracy. Nevertheless as [Battaglia,
+Christensen, Hansen & Sacher (2024)](https://arxiv.org/abs/2402.15585)
+document, even high-performance classifiers can lead to large biases in
+OLS estimates.
 
-We will estimate the model for this association both ignoring the fixed
-effects of employment and occupation type and controlling for them it
-(variables `soc_2021_2` and `employment_type_name`).
+The bias correction methods `ols_bca` and `ols_bcm` require estimates of
+the classifiers false-positive rate.
 
-## Results ignoring fixed effects
+We estimate the false positive rate manually. To do so, we took a random
+sample of size 1000 postings. Of these, 26 had `wfh_wham = 1`. based on
+reading tese 26 postings, 9 appeared to be misclassified. This means the
+estimated false-positive rate is 0.009. Accordingly, we will implement
+`ols_bca` and `ols_bcm` with `fpr = 0.009`(the estimated false-positive
+rate) and `m = 1000` (the sample size used to estimate the false
+positive rate).
+
+## Results
+
+We first present results for a simple regression of log alary onto the
+remote work indicator. We then consider a second specification with
+fixed effects.
+
+We compare standard OLS estimates and confidence intervals with
+estimates and confidence intervals using `ols_bcm` which performs a
+direct bias correction and computes bias corrected CIs, and `one_step`
+which performs maximum likelihod estimation treating the true labels as
+latent.
+
+### Without fixed effects
+
+We first present OLS estimates:
 
 ``` r
 lm_SD_1 <- ols(salary ~ wfh_wham, data = SD_data)
@@ -83,6 +118,8 @@ summary(lm_SD_1)
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
+Now using the multiplicative bias correction, with bias corrected CIs:
+
 ``` r
 SD_bcm_1 <- ols_bcm(salary ~ wfh_wham, data = SD_data, fpr = 0.009, m = 1000)
 summary(SD_bcm_1)
@@ -102,6 +139,8 @@ summary(SD_bcm_1)
     ## Beta_1   1.0524    0.1400    7.5156 5.67e-14    ***   [0.7780, 1.3269]
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Finally, using maximum likelihood:
 
 ``` r
 os_SD_1 <- one_step(salary ~ wfh_wham, data = SD_data)
@@ -125,7 +164,65 @@ summary(os_SD_1)
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-## Results accounting for fixed effects
+Note that the one-step estimates here use the default standard normal
+distribution for the regression errors. These estimates differ from
+Table 1 of [Battaglia, Christensen, Hansen & Sacher
+(2024)](https://arxiv.org/abs/2402.15585) which instead uses a Gaussian
+mixture.
+
+### With fixed effects
+
+We repeat the above now with fixed effects, which are easily generated
+for the categorical variables `soc_2021_2` amd `employment_type_name`.
+
+First, using OLS:
+
+``` r
+lm_SD_2 <- ols(salary ~ wfh_wham + soc_2021_2 + employment_type_name, data = SD_data)
+summary(lm_SD_2)
+```
+
+    ## 
+    ## MLBC Model Summary
+    ## ==================
+    ## 
+    ## Formula:  Y ~ Beta_0 + Beta_1 * wfh_wham + Beta_2 * soc_2021_213-0000 + Beta_3 * soc_2021_215-0000 + Beta_4 * soc_2021_217-0000 + Beta_5 * soc_2021_219-0000 + Beta_6 * soc_2021_221-0000 + Beta_7 * soc_2021_223-0000 + Beta_8 * soc_2021_225-0000 + Beta_9 * soc_2021_227-0000 + Beta_10 * soc_2021_229-0000 + Beta_11 * soc_2021_231-0000 + Beta_12 * soc_2021_233-0000 + Beta_13 * soc_2021_235-0000 + Beta_14 * soc_2021_237-0000 + Beta_15 * soc_2021_239-0000 + Beta_16 * soc_2021_241-0000 + Beta_17 * soc_2021_243-0000 + Beta_18 * soc_2021_245-0000 + Beta_19 * soc_2021_247-0000 + Beta_20 * soc_2021_249-0000 + Beta_21 * soc_2021_251-0000 + Beta_22 * soc_2021_253-0000 + Beta_23 * soc_2021_255-0000 + Beta_24 * soc_2021_299-0000 + Beta_25 * employment_type_namePart-time (≤ 32 hours) + Beta_26 * employment_type_namePart-time / full-time 
+    ## 
+    ## 
+    ## Coefficients:
+    ## 
+    ##         Estimate Std.Error   z.value Pr(>|z|) Signif             95% CI
+    ## Beta_0   11.0883    0.0090 1226.6801  < 2e-16    *** [11.0705, 11.1060]
+    ## Beta_1    0.3639    0.0215   16.8923  < 2e-16    ***   [0.3217, 0.4061]
+    ## Beta_2   -0.1435    0.0212   -6.7768 1.23e-11    *** [-0.1849, -0.1020]
+    ## Beta_3    0.1970    0.0361    5.4489 5.07e-08    ***   [0.1261, 0.2678]
+    ## Beta_4   -0.0461    0.0445   -1.0344   0.3009         [-0.1333, 0.0412]
+    ## Beta_5   -0.0531    0.0720   -0.7376   0.4608         [-0.1942, 0.0880]
+    ## Beta_6   -0.3044    0.0401   -7.5915 3.16e-14    *** [-0.3829, -0.2258]
+    ## Beta_7   -0.0616    0.2976   -0.2070   0.8360         [-0.6449, 0.5217]
+    ## Beta_8   -0.2241    0.0353   -6.3479 2.18e-10    *** [-0.2933, -0.1549]
+    ## Beta_9   -0.2511    0.0405   -6.1984 5.70e-10    *** [-0.3305, -0.1717]
+    ## Beta_10   0.1175    0.0638    1.8407   0.0657      .  [-0.0076, 0.2425]
+    ## Beta_11  -0.4298    0.0284  -15.1354  < 2e-16    *** [-0.4854, -0.3741]
+    ## Beta_12  -0.3882    0.0145  -26.7210  < 2e-16    *** [-0.4167, -0.3597]
+    ## Beta_13  -0.4407    0.0100  -43.8756  < 2e-16    *** [-0.4603, -0.4210]
+    ## Beta_14  -0.4679    0.0104  -45.0573  < 2e-16    *** [-0.4883, -0.4476]
+    ## Beta_15  -0.4459    0.0186  -23.9241  < 2e-16    *** [-0.4825, -0.4094]
+    ## Beta_16  -0.3862    0.0127  -30.3760  < 2e-16    *** [-0.4111, -0.3613]
+    ## Beta_17  -0.4042    0.0105  -38.3762  < 2e-16    *** [-0.4249, -0.3836]
+    ## Beta_18  -0.1559    0.0090  -17.2513  < 2e-16    *** [-0.1737, -0.1382]
+    ## Beta_19  -0.2782    0.0305   -9.1189  < 2e-16    *** [-0.3379, -0.2184]
+    ## Beta_20  -0.3279    0.0144  -22.7297  < 2e-16    *** [-0.3562, -0.2996]
+    ## Beta_21  -0.4383    0.0131  -33.3474  < 2e-16    *** [-0.4640, -0.4125]
+    ## Beta_22  -0.4287    0.0126  -33.8906  < 2e-16    *** [-0.4535, -0.4039]
+    ## Beta_23  -0.5578    0.0090  -61.7048  < 2e-16    *** [-0.5755, -0.5400]
+    ## Beta_24  -0.3577    0.0182  -19.6670  < 2e-16    *** [-0.3934, -0.3221]
+    ## Beta_25  -0.1688    0.0054  -31.2136  < 2e-16    *** [-0.1794, -0.1582]
+    ## Beta_26  -0.1610    0.0050  -32.4754  < 2e-16    *** [-0.1707, -0.1513]
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Now using the multiplicative bias correction:
 
 ``` r
 SD_bcm_2 <- ols_bcm(salary ~ wfh_wham + soc_2021_2 + employment_type_name, data = SD_data, fpr = 0.009, m = 1000)
@@ -171,6 +268,11 @@ summary(SD_bcm_2)
     ## Beta_26  -0.1564    0.0052  -30.0662  < 2e-16    *** [-0.1666, -0.1462]
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Comparing these results with the OLS results above, we see that the bias
+corrected CI for the slope coefficient lies to the right of the OLS CI.
+
+Finally, using maximum likelihood:
 
 ``` r
 os_SD_2 <- one_step(salary ~ wfh_wham + soc_2021_2 + employment_type_name, data = SD_data)
@@ -226,6 +328,6 @@ summary(os_SD_2)
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Note: the results for `one_step` estimates diverge from those reported
-in the “Joint” column of Table 1 in the paper as those were generated
-using a Gaussian mixture model not yet available in the package
+As before, the results for `one_step` diverge from those reported in the
+“Joint” column of Table 1 in the paper as those were generated using a
+Gaussian mixture model.
