@@ -1,3 +1,4 @@
+# Simulation Example: Bias Correction in Regression with Generated Binary Labels
 This simulation example demonstrates the use of the `MLBC` package for
 correcting bias and performing valid inference in regression models with
 generated binary labels.
