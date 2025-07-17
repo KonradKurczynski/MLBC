@@ -1,5 +1,4 @@
-# Remote Work and Wage Inequality: Correcting Bias in Regression with Generated Binary Labels
-## About this notebook
+# About this notebook
 
 This notebook estimates the association between working from home and
 salaries using real-world job postings data [(Hansen et al.,
@@ -46,20 +45,20 @@ SD_data$salary <- log(SD_data$salary)
 head(SD_data)
 ```
 
-    ##       city_name naics_2022_2                                       id   salary
-    ## 1 San Diego, CA           72 002e22ebe1b837ac6b0cebcbb720613138765f51 10.95954
-    ## 2 San Diego, CA           72 00442454060b60c1c0ad4ed78bc29111935f400b 10.34817
-    ## 3 San Diego, CA           72 007a1c1a527ed15006705379cec780aaae4930af 10.41271
-    ## 4 San Diego, CA           72 00991b69215b1cc14c08c4cdfa1b10bbbdf6ceba 10.61054
-    ## 5 San Diego, CA           72 00edf6dc0abb731a0befa73f6748ff3f5ce842f4 10.73117
-    ## 6 San Diego, CA           72 01b2f3e54547ccac8a7386458d06ee3f6fbf45ba 10.41271
-    ##   wfh_wham soc_2021_2   employment_type_name
-    ## 1        0    11-0000 Full-time (> 32 hours)
-    ## 2        0    35-0000 Full-time (> 32 hours)
-    ## 3        0    35-0000  Part-time / full-time
-    ## 4        0    35-0000 Full-time (> 32 hours)
-    ## 5        0    11-0000 Full-time (> 32 hours)
-    ## 6        0    35-0000 Full-time (> 32 hours)
+    ##       city_name naics_2022_2   salary wfh_wham soc_2021_2
+    ## 1 San Diego, CA           72 10.95954        0    11-0000
+    ## 2 San Diego, CA           72 10.34817        0    35-0000
+    ## 3 San Diego, CA           72 10.41271        0    35-0000
+    ## 4 San Diego, CA           72 10.61054        0    35-0000
+    ## 5 San Diego, CA           72 10.73117        0    11-0000
+    ## 6 San Diego, CA           72 10.41271        0    35-0000
+    ##     employment_type_name
+    ## 1 Full-time (> 32 hours)
+    ## 2 Full-time (> 32 hours)
+    ## 3  Part-time / full-time
+    ## 4 Full-time (> 32 hours)
+    ## 5 Full-time (> 32 hours)
+    ## 6 Full-time (> 32 hours)
 
 # Estimating the false-positive rate
 
