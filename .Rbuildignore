@@ -18,6 +18,7 @@
 ^synthetic_example\.md$
 ^topic_model_example\.Rmd$
 ^topic_model_example\.html$
+^topic_model_example\.md
 
 # Compiled artifacts (just in case)
 ^src/.+\.(o|so|dll|dSYM)$
