@@ -4,11 +4,10 @@
 #' for demonstrating bias correction methods with ML-generated variables.
 #'
 #' @format ## `SD_data`
-#' A data frame with 16315 rows and 7 columns:
+#' A data frame with 16315 rows and 6 columns:
 #' \describe{
 #'   \item{city_name}{Character. City of the job posting}
 #'   \item{naics_2022_2}{Character. Type of business (NAICS industry classification)}
-#'   \item{id}{Integer. Unique identifier of the job posting}
 #'   \item{salary}{Numeric. Salary offered (response variable)}
 #'   \item{wfh_wham}{Numeric. Binary label generated via ML, indicating whether
 #'                   remote work is offered (subject to measurement error)}
