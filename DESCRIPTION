@@ -1,5 +1,5 @@
 Package: MLBC
-Version: 0.2.1
+Version: 0.2.2
 Title: Bias Correction Methods for Models Using Synthetic Data
 Authors@R: c(person("Konrad", "Kurczynski", role = c("aut","cre"), email="konrad.kurczynski@yale.edu"),
       person("Timothy", "Christensen", role = "aut", email="timothy.christensen@yale.edu"))
